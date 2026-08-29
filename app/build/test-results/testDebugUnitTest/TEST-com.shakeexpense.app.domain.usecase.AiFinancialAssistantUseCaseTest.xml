@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.shakeexpense.app.domain.usecase.AiFinancialAssistantUseCaseTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-08-29T07:15:56" hostname="ASHRIT" time="0.012">
+  <properties/>
+  <testcase name="test affordability check returns caution when exceeding buffer" classname="com.shakeexpense.app.domain.usecase.AiFinancialAssistantUseCaseTest" time="0.004"/>
+  <testcase name="test free tier is gated from AI Assistant" classname="com.shakeexpense.app.domain.usecase.AiFinancialAssistantUseCaseTest" time="0.0"/>
+  <testcase name="test plus tier answers top spending category correctly" classname="com.shakeexpense.app.domain.usecase.AiFinancialAssistantUseCaseTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

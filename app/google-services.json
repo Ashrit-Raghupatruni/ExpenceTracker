@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "255872088042",
+    "project_id": "shakeexpense-tracker",
+    "storage_bucket": "shakeexpense-tracker.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:255872088042:android:6cc8f02527baf805a8e493",
+        "android_client_info": {
+          "package_name": "com.shakeexpense.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDem7iq_yvYlMiwVFEU1ZGy58uh83GgLts"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

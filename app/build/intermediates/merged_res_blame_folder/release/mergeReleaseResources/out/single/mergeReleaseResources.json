@@ -1,0 +1,50 @@
+[
+    {
+        "merged": "com.shakeexpense.app-release-64:/xml_file_paths.xml.flat",
+        "source": "com.shakeexpense.app-main-65:/xml/file_paths.xml"
+    },
+    {
+        "merged": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-release-64:\\mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-main-65:\\mipmap-xhdpi\\ic_launcher_round.png"
+    },
+    {
+        "merged": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-release-64:\\mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-main-65:\\mipmap-xhdpi\\ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-release-64:\\mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-main-65:\\mipmap-mdpi\\ic_launcher_round.png"
+    },
+    {
+        "merged": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-release-64:\\mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-main-65:\\mipmap-xxhdpi\\ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-release-64:\\mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-main-65:\\mipmap-xxxhdpi\\ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-release-64:\\drawable_app_icon_full.png.flat",
+        "source": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-main-65:\\drawable\\app_icon_full.png"
+    },
+    {
+        "merged": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-release-64:\\mipmap-hdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-main-65:\\mipmap-hdpi\\ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-release-64:\\mipmap-mdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-main-65:\\mipmap-mdpi\\ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-release-64:\\mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-main-65:\\mipmap-xxhdpi\\ic_launcher_round.png"
+    },
+    {
+        "merged": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-release-64:\\mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-main-65:\\mipmap-xxxhdpi\\ic_launcher_round.png"
+    },
+    {
+        "merged": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-release-64:\\mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "C:\\Users\\ashri\\.gradle\\daemon\\8.9\\com.shakeexpense.app-main-65:\\mipmap-hdpi\\ic_launcher_round.png"
+    }
+]

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.shakeexpense.app.ui.tracker.TrackerViewModelTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-08-29T07:15:59" hostname="ASHRIT" time="0.864">
+  <properties/>
+  <testcase name="testCategoryBreakdownAggregation" classname="com.shakeexpense.app.ui.tracker.TrackerViewModelTest" time="0.134"/>
+  <testcase name="testSpendingTotalsCalculation" classname="com.shakeexpense.app.ui.tracker.TrackerViewModelTest" time="0.09"/>
+  <testcase name="testEditExpenseFlow" classname="com.shakeexpense.app.ui.tracker.TrackerViewModelTest" time="0.089"/>
+  <testcase name="testTrackerViewModelTabSelection" classname="com.shakeexpense.app.ui.tracker.TrackerViewModelTest" time="0.125"/>
+  <testcase name="testSpreadsheetStreamOrdering" classname="com.shakeexpense.app.ui.tracker.TrackerViewModelTest" time="0.063"/>
+  <testcase name="testDeleteExpenseFlow" classname="com.shakeexpense.app.ui.tracker.TrackerViewModelTest" time="0.073"/>
+  <testcase name="testSyncDisplayStatusOfflineAndPending" classname="com.shakeexpense.app.ui.tracker.TrackerViewModelTest" time="0.148"/>
+  <testcase name="testSwipeToDeleteReactiveStateUpdates" classname="com.shakeexpense.app.ui.tracker.TrackerViewModelTest" time="0.141"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
