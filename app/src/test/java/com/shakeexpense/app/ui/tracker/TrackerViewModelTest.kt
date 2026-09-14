@@ -304,13 +304,16 @@ class TrackerViewModelTest {
             deleteExpenseUseCase
         )
 
-        assertEquals(TrackerTab.SPREADSHEET, viewModel.state.value.selectedTab)
+        assertEquals(TrackerTab.DASHBOARD, viewModel.state.value.selectedTab)
 
         viewModel.onTabSelected(TrackerTab.CATEGORY_BREAKDOWN)
         assertEquals(TrackerTab.CATEGORY_BREAKDOWN, viewModel.state.value.selectedTab)
 
         viewModel.onTabSelected(TrackerTab.SPREADSHEET)
         assertEquals(TrackerTab.SPREADSHEET, viewModel.state.value.selectedTab)
+
+        viewModel.onTabSelected(TrackerTab.DASHBOARD)
+        assertEquals(TrackerTab.DASHBOARD, viewModel.state.value.selectedTab)
     }
 
     @Test

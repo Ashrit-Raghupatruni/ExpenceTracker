@@ -252,30 +252,33 @@ fun QuickEntryOverlayScreen(
                     onBackspaceClick = { viewModel.onBackspacePressed() }
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Save Action Button
-                Button(
+                com.shakeexpense.app.ui.design.NeuButton(
                     onClick = {
-                        viewModel.saveExpense(source = TransactionSource.MANUAL_SHAKE) {
-                            onSaveSuccess()
+                        if (state.isSaveEnabled) {
+                            viewModel.saveExpense(source = TransactionSource.MANUAL_SHAKE) {
+                                onSaveSuccess()
+                            }
                         }
                     },
-                    enabled = state.isSaveEnabled,
+                    isPrimary = state.isSaveEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2563EB)
-                    )
+                        .height(50.dp)
                 ) {
-                    Icon(Icons.Default.Check, contentDescription = null)
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = if (state.isSaveEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (state.isSaving) "SAVING..." else "SAVE (✓)",
+                        text = if (state.isSaving) "SAVING..." else "SAVE EXPENSE (✓)",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontSize = 15.sp,
+                        color = if (state.isSaveEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -299,66 +302,28 @@ fun OverlayKeypad(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(5.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         keys.forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 row.forEach { key ->
-                    OverlayKeypadButton(
-                        key = key,
-                        modifier = Modifier.weight(1f),
+                    val isAction = key == "⌫"
+                    com.shakeexpense.app.ui.design.NeuKeypadButton(
+                        symbol = key,
                         onClick = {
                             when (key) {
-                                "." -> onDecimalClick()
                                 "⌫" -> onBackspaceClick()
+                                "." -> onDecimalClick()
                                 else -> onDigitClick(key)
                             }
-                        }
+                        },
+                        isAccent = isAction,
+                        modifier = Modifier.weight(1f)
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun OverlayKeypadButton(
-    key: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .aspectRatio(2.4f)
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
-        ),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            if (key == "⌫") {
-                Icon(
-                    Icons.AutoMirrored.Filled.Backspace,
-                    contentDescription = "Backspace",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            } else {
-                Text(
-                    text = key,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    fontFamily = FontFamily.Monospace,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
             }
         }
     }

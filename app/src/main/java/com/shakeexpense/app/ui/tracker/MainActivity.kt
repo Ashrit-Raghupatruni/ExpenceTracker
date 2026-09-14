@@ -38,9 +38,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -104,97 +106,25 @@ enum class MainNavigationSection {
 
 class MainActivity : ComponentActivity() {
 
-    private val themePreferences by lazy { ThemePreferences.getInstance(this) }
-    private val authRepository by lazy { AuthRepository(this) }
+    private val appContainer by lazy { (application as ShakeExpenseApp).container }
+    private val themePreferences by lazy { appContainer.themePreferences }
+    private val authRepository by lazy { appContainer.authRepository }
 
     private val trackerViewModel: TrackerViewModel by viewModels {
-        val app = application as ShakeExpenseApp
-        val database = app.database
-        val categoryRepo = CategoryRepositoryImpl(database.categoryDao())
-        val expenseRepo = app.expenseRepository
-        val familyRepo = FamilyRepositoryImpl(database.familyMemberDao(), database.familyGroupDao())
-        val syncEngine = SyncEngine(expenseRepo, SyncApiClientProvider.get(), this, familyRepo)
-        val networkMonitor = NetworkConnectivityMonitor(this)
-
-        val financialProfileRepo = com.shakeexpense.app.data.repository.FinancialProfileRepositoryImpl(database.financialProfileDao())
-        val recurringPaymentRepo = com.shakeexpense.app.data.repository.RecurringPaymentRepositoryImpl(database.recurringPaymentDao())
         val currentUserId = authRepository.getCurrentProfile().userId
-
-        TrackerViewModel.provideFactory(
-            GetSpreadsheetStreamUseCase(expenseRepo),
-            GetSpendingTotalsUseCase(expenseRepo),
-            GetCategoryBreakdownUseCase(expenseRepo),
-            categoryRepo,
-            expenseRepo,
-            EditExpenseUseCase(expenseRepo),
-            DeleteExpenseUseCase(expenseRepo, syncEngine),
-            networkMonitor.isOnline,
-            financialProfileRepo,
-            recurringPaymentRepo,
-            currentUserId
-        )
+        appContainer.createTrackerViewModelFactory(currentUserId)
     }
 
     private val expenseEntryViewModel: ExpenseEntryViewModel by viewModels {
-        val app = application as ShakeExpenseApp
-        val database = app.database
-        val categoryRepo = CategoryRepositoryImpl(database.categoryDao())
-        val expenseRepo = app.expenseRepository
-        ExpenseEntryViewModel.provideFactory(
-            GetCategoriesUseCase(categoryRepo),
-            AddExpenseUseCase(expenseRepo),
-            authRepository
-        )
+        appContainer.createExpenseEntryViewModelFactory()
     }
 
     private val familyViewModel: FamilyViewModel by viewModels {
-        val app = application as ShakeExpenseApp
-        val database = app.database
-        val familyRepo = FamilyRepositoryImpl(database.familyMemberDao(), database.familyGroupDao(), database.familyBudgetDao())
-        val expenseRepo = app.expenseRepository
-        val syncApiClient = SyncApiClientProvider.get()
-        val syncEngine = SyncEngine(expenseRepo, syncApiClient, this, familyRepo)
-
-        FamilyViewModel.provideFactory(
-            GetFamilyMembersUseCase(familyRepo),
-            AddFamilyMemberUseCase(familyRepo),
-            RemoveFamilyMemberUseCase(familyRepo),
-            RequestChildExitUseCase(familyRepo),
-            CreateFamilyGroupUseCase(syncApiClient, familyRepo),
-            JoinFamilyGroupUseCase(syncApiClient, familyRepo),
-            GetMemberSpendingSummaryUseCase(expenseRepo, familyRepo),
-            GetMemberCategoryBreakdownUseCase(expenseRepo, familyRepo),
-            GetMemberExpensesUseCase(expenseRepo, familyRepo),
-            SyncFamilyExpensesUseCase(syncEngine),
-            familyRepo,
-            authRepository,
-            expenseRepo,
-            app.entitlementManager
-        )
+        appContainer.createFamilyViewModelFactory()
     }
 
     private val profileViewModel: ProfileViewModel by viewModels {
-        val app = application as ShakeExpenseApp
-        val database = app.database
-        val expenseRepo = app.expenseRepository
-        val familyRepo = FamilyRepositoryImpl(database.familyMemberDao(), database.familyGroupDao())
-        val networkMonitor = NetworkConnectivityMonitor(this)
-
-        val syncApiClient = SyncApiClientProvider.get()
-        val syncEngine = SyncEngine(expenseRepo, syncApiClient, this, familyRepo)
-
-        ProfileViewModel.provideFactory(
-            authRepository,
-            GetMonthlyExpenseHistoryUseCase(expenseRepo),
-            themePreferences,
-            familyRepo,
-            database.expenseDao(),
-            expenseRepo,
-            syncEngine,
-            networkMonitor,
-            com.shakeexpense.app.data.repository.RecurringPaymentRepositoryImpl(database.recurringPaymentDao()),
-            com.shakeexpense.app.data.repository.FinancialProfileRepositoryImpl(database.financialProfileDao())
-        )
+        appContainer.createProfileViewModelFactory()
     }
 
     private val googleSignInLauncher = registerForActivityResult(
@@ -294,25 +224,34 @@ class MainActivity : ComponentActivity() {
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                         bottomBar = {
-                            NavigationBar {
-                                NavigationBarItem(
-                                    selected = currentSection == MainNavigationSection.TRACKER,
-                                    onClick = { currentSection = MainNavigationSection.TRACKER },
-                                    icon = { Icon(Icons.Default.TableChart, contentDescription = "Tracker") },
-                                    label = { Text("Tracker") }
-                                )
-                                NavigationBarItem(
-                                    selected = currentSection == MainNavigationSection.FAMILY,
-                                    onClick = { currentSection = MainNavigationSection.FAMILY },
-                                    icon = { Icon(Icons.Default.Group, contentDescription = "Family Hub") },
-                                    label = { Text("Family") }
-                                )
-                                NavigationBarItem(
-                                    selected = currentSection == MainNavigationSection.PROFILE,
-                                    onClick = { currentSection = MainNavigationSection.PROFILE },
-                                    icon = { Icon(Icons.Default.AccountCircle, contentDescription = "Profile") },
-                                    label = { Text("Profile") }
-                                )
+                            Surface(
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                                shadowElevation = 8.dp,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                            ) {
+                                NavigationBar(
+                                    containerColor = Color.Transparent,
+                                    tonalElevation = 0.dp
+                                ) {
+                                    NavigationBarItem(
+                                        selected = currentSection == MainNavigationSection.TRACKER,
+                                        onClick = { currentSection = MainNavigationSection.TRACKER },
+                                        icon = { Icon(Icons.Default.TableChart, contentDescription = "Tracker") },
+                                        label = { Text("Tracker", fontWeight = if (currentSection == MainNavigationSection.TRACKER) FontWeight.Bold else FontWeight.Normal) }
+                                    )
+                                    NavigationBarItem(
+                                        selected = currentSection == MainNavigationSection.FAMILY,
+                                        onClick = { currentSection = MainNavigationSection.FAMILY },
+                                        icon = { Icon(Icons.Default.Group, contentDescription = "Family Hub") },
+                                        label = { Text("Family", fontWeight = if (currentSection == MainNavigationSection.FAMILY) FontWeight.Bold else FontWeight.Normal) }
+                                    )
+                                    NavigationBarItem(
+                                        selected = currentSection == MainNavigationSection.PROFILE,
+                                        onClick = { currentSection = MainNavigationSection.PROFILE },
+                                        icon = { Icon(Icons.Default.AccountCircle, contentDescription = "Profile") },
+                                        label = { Text("Profile", fontWeight = if (currentSection == MainNavigationSection.PROFILE) FontWeight.Bold else FontWeight.Normal) }
+                                    )
+                                }
                             }
                         }
                     ) { innerPadding ->

@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -23,22 +26,50 @@ android {
         }
     }
 
+    val localProps = Properties().apply {
+        val localPropsFile = rootProject.file("local.properties")
+        if (localPropsFile.exists()) {
+            FileInputStream(localPropsFile).use { load(it) }
+        }
+    }
+
+    val releaseStoreFile = System.getenv("SHAKEEXPENSE_STORE_FILE")
+        ?: localProps.getProperty("shakeexpense.storeFile")
+        ?: "shakeexpense.keystore"
+    val releaseStorePassword = System.getenv("SHAKEEXPENSE_STORE_PASSWORD")
+        ?: localProps.getProperty("shakeexpense.storePassword")
+        ?: ""
+    val releaseKeyAlias = System.getenv("SHAKEEXPENSE_KEY_ALIAS")
+        ?: localProps.getProperty("shakeexpense.keyAlias")
+        ?: "shakeexpense"
+    val releaseKeyPassword = System.getenv("SHAKEEXPENSE_KEY_PASSWORD")
+        ?: localProps.getProperty("shakeexpense.keyPassword")
+        ?: ""
+
     signingConfigs {
         create("release") {
-            storeFile = file("shakeexpense.keystore")
-            storePassword = "shakeexpense123"
-            keyAlias = "shakeexpense"
-            keyPassword = "shakeexpense123"
+            if (releaseStorePassword.isNotBlank()) {
+                val keystoreFile = file(releaseStoreFile)
+                if (keystoreFile.exists()) {
+                    storeFile = keystoreFile
+                    storePassword = releaseStorePassword
+                    keyAlias = releaseKeyAlias
+                    keyPassword = releaseKeyPassword
+                }
+            }
         }
     }
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("release")
+            // Use standard Android debug signing
         }
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            val relConfig = signingConfigs.findByName("release")
+            if (relConfig?.storeFile != null) {
+                signingConfig = relConfig
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

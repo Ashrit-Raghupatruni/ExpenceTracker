@@ -7,19 +7,76 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid != null;
     }
 
-    // 1. Families Collection (Family groups & invite codes)
+    // Check if the current user is a registered member of the family
+    function isFamilyMember(familyId) {
+      return isAuthenticated() && exists(/databases/$(database)/documents/family_members/$(familyId + '_' + request.auth.uid));
+    }
+
+    // Check if the current user is a Parent / Admin of the family
+    function isFamilyParent(familyId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/family_members/$(familyId + '_' + request.auth.uid)) &&
+        get(/databases/$(database)/documents/family_members/$(familyId + '_' + request.auth.uid)).data.role == 'PARENT';
+    }
+
+    // 1. Families Collection (Family groups, budgets, & invite codes)
     match /families/{familyId} {
-      allow read, write: if true;
+      // Allow read for authenticated family members, creator, or when searching by invite code
+      allow read: if isAuthenticated() && (
+        resource == null || 
+        resource.data.creatorUserId == request.auth.uid || 
+        isFamilyMember(familyId)
+      );
+      
+      // Allow creation only if the creator matches authenticated user
+      allow create: if isAuthenticated() && request.resource.data.creatorUserId == request.auth.uid;
+      
+      // Allow updates/deletion only by family creator or authorized parent
+      allow update, delete: if isAuthenticated() && (
+        resource.data.creatorUserId == request.auth.uid || 
+        isFamilyParent(familyId)
+      );
     }
 
-    // 2. Family Members Collection (Parent/Child roles & devices)
+    // 2. Family Members Collection (Parent/Child roles & device links)
     match /family_members/{memberDocId} {
-      allow read, write: if true;
+      // Members can read their own records or records belonging to their family group
+      allow read: if isAuthenticated() && (
+        resource == null ||
+        resource.data.userId == request.auth.uid ||
+        isFamilyMember(resource.data.familyId)
+      );
+      
+      // Users can register themselves or parents can add members
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        isFamilyParent(request.resource.data.familyId)
+      );
+      
+      // Users can update their own device/privacy/exit requests; parents can govern members
+      allow update, delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyParent(resource.data.familyId)
+      );
     }
 
-    // 3. Expenses Collection (Multi-device shared expense transactions)
+    // 3. Expenses Collection (Multi-device personal & family transactions)
     match /expenses/{expenseUuid} {
-      allow read, write: if true;
+      // Users can read their own personal expenses or family expenses if they belong to the family
+      allow read: if isAuthenticated() && (
+        resource == null ||
+        resource.data.userId == request.auth.uid ||
+        (resource.data.familyId != null && resource.data.familyId != '' && isFamilyMember(resource.data.familyId))
+      );
+      
+      // Users can only create expenses attributed to their own authenticated userId
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Users can update/delete their own expenses; parents can moderate family expenses
+      allow update, delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        (resource.data.familyId != null && resource.data.familyId != '' && isFamilyParent(resource.data.familyId))
+      );
     }
   }
 }

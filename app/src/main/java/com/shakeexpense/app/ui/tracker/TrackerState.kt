@@ -12,6 +12,7 @@ import com.shakeexpense.app.domain.usecase.SpendingTotals
 import com.shakeexpense.app.domain.usecase.UnusualSpendingAlert
 
 enum class TrackerTab {
+    DASHBOARD,
     SPREADSHEET,
     CATEGORY_BREAKDOWN
 }
@@ -23,7 +24,7 @@ enum class SyncDisplayStatus {
 }
 
 data class TrackerState(
-    val selectedTab: TrackerTab = TrackerTab.SPREADSHEET,
+    val selectedTab: TrackerTab = TrackerTab.DASHBOARD,
     val totals: SpendingTotals = SpendingTotals(),
     val records: List<ExpenseRecordItem> = emptyList(),
     val categoryBreakdowns: List<CategorySubtotal> = emptyList(),

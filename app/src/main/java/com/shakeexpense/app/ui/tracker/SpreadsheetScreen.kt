@@ -56,9 +56,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.platform.LocalContext
 import com.shakeexpense.app.domain.model.SubscriptionPlan
 import com.shakeexpense.app.domain.usecase.UnusualSpendingAlert
+import com.shakeexpense.app.ui.design.FinancialFormatter
+import com.shakeexpense.app.ui.design.GlassCard
+import com.shakeexpense.app.ui.design.NeuSegmentedControl
+import com.shakeexpense.app.ui.design.QuickActionFAB
+import com.shakeexpense.app.ui.design.SafeToSpendHeroCard
+import com.shakeexpense.app.ui.design.ShakeDesignTokens
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -156,49 +163,55 @@ fun TrackerMainScreen(
                 PersonalSpendingLimitAlertBanner(limitState = limitState)
             }
 
-            // Consolidated Totals Header
-            ConsolidatedTotalsHeader(
-                totals = state.totals,
-                safeToSpend = state.safeToSpend,
-                spendingLimitState = state.spendingLimitState,
-                nextMonthPrediction = state.nextMonthPrediction,
-                onOpenBudgetSetup = { viewModel.onOpenBudgetSetupDialog() },
-                onOpenLimitEdit = { viewModel.onOpenSpendingLimitEditDialog() }
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // View Switcher Tabs (All Entries | Grouped by Category)
-            TabRow(
-                selectedTabIndex = if (state.selectedTab == TrackerTab.SPREADSHEET) 0 else 1,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = Color(0xFF2563EB)
+            // View Switcher (Dashboard | Spreadsheet | Categories)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
             ) {
-                Tab(
-                    selected = state.selectedTab == TrackerTab.SPREADSHEET,
-                    onClick = { viewModel.onTabSelected(TrackerTab.SPREADSHEET) },
-                    text = {
-                        Text(
-                            text = if (state.searchResults != null) "Search Results (${state.searchResults!!.size})" else "Spreadsheet View",
-                            fontWeight = if (state.selectedTab == TrackerTab.SPREADSHEET) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                )
-                Tab(
-                    selected = state.selectedTab == TrackerTab.CATEGORY_BREAKDOWN,
-                    onClick = { viewModel.onTabSelected(TrackerTab.CATEGORY_BREAKDOWN) },
-                    text = {
-                        Text(
-                            text = "Grouped by Category",
-                            fontWeight = if (state.selectedTab == TrackerTab.CATEGORY_BREAKDOWN) FontWeight.Bold else FontWeight.Normal
-                        )
+                com.shakeexpense.app.ui.design.NeuSegmentedControl(
+                    items = listOf(
+                        "Dashboard",
+                        if (state.searchResults != null) "Search (${state.searchResults!!.size})" else "Spreadsheet",
+                        "Categories"
+                    ),
+                    selectedIndex = when (state.selectedTab) {
+                        TrackerTab.DASHBOARD -> 0
+                        TrackerTab.SPREADSHEET -> 1
+                        TrackerTab.CATEGORY_BREAKDOWN -> 2
+                    },
+                    onSelectIndex = { index ->
+                        when (index) {
+                            0 -> viewModel.onTabSelected(TrackerTab.DASHBOARD)
+                            1 -> viewModel.onTabSelected(TrackerTab.SPREADSHEET)
+                            2 -> viewModel.onTabSelected(TrackerTab.CATEGORY_BREAKDOWN)
+                        }
                     }
                 )
             }
 
             // Tab Content
             when (state.selectedTab) {
+                TrackerTab.DASHBOARD -> {
+                    TrackerDashboardView(
+                        state = state,
+                        onOpenBudgetSetup = { viewModel.onOpenBudgetSetupDialog() },
+                        onOpenLimitEdit = { viewModel.onOpenSpendingLimitEditDialog() },
+                        onOpenSpreadsheet = { viewModel.onTabSelected(TrackerTab.SPREADSHEET) },
+                        onRecordClick = { viewModel.onSelectRecordForEdit(it) }
+                    )
+                }
                 TrackerTab.SPREADSHEET -> {
+                    // Consolidated Totals Header in Spreadsheet View
+                    ConsolidatedTotalsHeader(
+                        totals = state.totals,
+                        safeToSpend = state.safeToSpend,
+                        spendingLimitState = state.spendingLimitState,
+                        nextMonthPrediction = state.nextMonthPrediction,
+                        onOpenBudgetSetup = { viewModel.onOpenBudgetSetupDialog() },
+                        onOpenLimitEdit = { viewModel.onOpenSpendingLimitEditDialog() }
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
                     SpreadsheetDataGrid(
                         records = state.searchResults ?: state.records,
                         onRecordClick = { viewModel.onSelectRecordForEdit(it) },
@@ -215,16 +228,12 @@ fun TrackerMainScreen(
         }
 
         // Floating Action Button (+) for Quick Entry
-        FloatingActionButton(
+        com.shakeexpense.app.ui.design.QuickActionFAB(
             onClick = onOpenQuickEntry,
-            containerColor = Color(0xFF2563EB),
-            contentColor = Color.White,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(20.dp)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Expense")
-        }
+        )
 
         // Edit / Delete Expense Dialog
         if (state.editingRecord != null) {
@@ -1669,3 +1678,336 @@ fun SpendingLimitEditDialog(
         }
     )
 }
+
+@Composable
+private fun TrackerDashboardView(
+    state: TrackerState,
+    onOpenBudgetSetup: () -> Unit,
+    onOpenLimitEdit: () -> Unit,
+    onOpenSpreadsheet: () -> Unit,
+    onRecordClick: (ExpenseRecordItem) -> Unit
+) {
+    var isSafeToSpendCollapsed by rememberSaveable { mutableStateOf(false) }
+    var isPacingCollapsed by rememberSaveable { mutableStateOf(false) }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // 1. Safe to Spend Hero Card
+        item {
+            com.shakeexpense.app.ui.design.SafeToSpendHeroCard(
+                safeTodayCents = state.safeToSpend?.safeToSpendTodayCents ?: 0L,
+                remainingMonthCents = state.safeToSpend?.safeToSpendMonthlyCents ?: 0L,
+                incomeCents = state.safeToSpend?.monthlyIncomeCents ?: 0L,
+                spentThisMonthCents = state.totals.thisMonthDebitCents,
+                daysRemainingInCycle = state.safeToSpend?.daysRemainingInCycle ?: 30,
+                onConfigureClick = onOpenBudgetSetup,
+                isCollapsed = isSafeToSpendCollapsed,
+                onToggleCollapse = { isSafeToSpendCollapsed = !isSafeToSpendCollapsed }
+            )
+        }
+
+        // 2. Spending Limit Pacing Card (if configured)
+        val limitState = state.spendingLimitState
+        if (limitState != null && limitState.activeMonthlyLimitCents > 0L) {
+            item {
+                SpendingLimitPacingCard(
+                    limitState = limitState,
+                    spentThisMonthCents = state.totals.thisMonthDebitCents,
+                    onOpenLimitEdit = onOpenLimitEdit,
+                    isCollapsed = isPacingCollapsed,
+                    onToggleCollapse = { isPacingCollapsed = !isPacingCollapsed }
+                )
+            }
+        }
+
+        // 3. Quick Stats Grid
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                QuickStatCard(
+                    title = "Today",
+                    amountCents = state.totals.todayDebitCents,
+                    modifier = Modifier.weight(1f)
+                )
+                QuickStatCard(
+                    title = "This Month",
+                    amountCents = state.totals.thisMonthDebitCents,
+                    modifier = Modifier.weight(1f)
+                )
+                QuickStatCard(
+                    title = "All Time",
+                    amountCents = state.totals.allTimeDebitCents,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // 4. Recent Transactions Section Header
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Recent Transactions",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                TextButton(onClick = onOpenSpreadsheet) {
+                    Text(
+                        text = "View All (${state.records.size}) ➔",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        // 5. Recent Transactions Preview List
+        val recentList = state.records.take(6)
+        if (recentList.isEmpty()) {
+            item {
+                com.shakeexpense.app.ui.design.GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "No expenses logged yet. Tap '+' or shake your phone to record your first expense!",
+                        textAlign = TextAlign.Center,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    )
+                }
+            }
+        } else {
+            items(recentList.size) { index ->
+                val record = recentList[index]
+                DashboardRecentExpenseRow(
+                    record = record,
+                    onClick = { onRecordClick(record) }
+                )
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(72.dp))
+        }
+    }
+}
+
+@Composable
+private fun QuickStatCard(
+    title: String,
+    amountCents: Long,
+    modifier: Modifier = Modifier
+) {
+    com.shakeexpense.app.ui.design.GlassCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        elevation = 1.dp
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = title.uppercase(),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = "₹${com.shakeexpense.app.ui.design.FinancialFormatter.formatCents(amountCents)}",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontFamily = com.shakeexpense.app.ui.design.FinancialFormatter.TabularFontFamily,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun SpendingLimitPacingCard(
+    limitState: com.shakeexpense.app.domain.usecase.SpendingLimitState,
+    spentThisMonthCents: Long,
+    onOpenLimitEdit: () -> Unit,
+    isCollapsed: Boolean,
+    onToggleCollapse: () -> Unit
+) {
+    val usagePercent = limitState.usagePercentage.toInt().coerceIn(0, 100)
+    val remainingCents = (limitState.activeMonthlyLimitCents - spentThisMonthCents).coerceAtLeast(0L)
+
+    com.shakeexpense.app.ui.design.GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        elevation = 2.dp
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { onToggleCollapse() }
+                ) {
+                    Text(
+                        text = "MONTHLY LIMIT PACING",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.6.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onOpenLimitEdit, modifier = Modifier.size(26.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Limit",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    IconButton(onClick = onToggleCollapse, modifier = Modifier.size(26.dp)) {
+                        Icon(
+                            imageVector = if (isCollapsed) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                            contentDescription = "Collapse",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Text(
+                    text = "₹${com.shakeexpense.app.ui.design.FinancialFormatter.formatCents(spentThisMonthCents)} / ₹${com.shakeexpense.app.ui.design.FinancialFormatter.formatCents(limitState.activeMonthlyLimitCents)}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = com.shakeexpense.app.ui.design.FinancialFormatter.TabularFontFamily,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "$usagePercent% spent",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = when {
+                        usagePercent >= 90 -> Color(0xFFEF4444)
+                        usagePercent >= 75 -> Color(0xFFF59E0B)
+                        else -> Color(0xFF10B981)
+                    }
+                )
+            }
+
+            AnimatedVisibility(visible = !isCollapsed) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LinearProgressIndicator(
+                        progress = { (limitState.usagePercentage.toFloat() / 100f).coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = when {
+                            usagePercent >= 90 -> Color(0xFFEF4444)
+                            usagePercent >= 75 -> Color(0xFFF59E0B)
+                            else -> Color(0xFF10B981)
+                        },
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                    Text(
+                        text = "Remaining allowance: ₹${com.shakeexpense.app.ui.design.FinancialFormatter.formatCents(remainingCents)}",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardRecentExpenseRow(
+    record: ExpenseRecordItem,
+    onClick: () -> Unit
+) {
+    val dateFormat = SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault())
+    val isDebit = record.transactionType.equals("DEBIT", ignoreCase = true)
+    val categoryColor = parseColorHex(record.categoryColor)
+
+    com.shakeexpense.app.ui.design.GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        elevation = 1.dp,
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(categoryColor)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = record.displayCategory,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (!record.customName.isNullOrBlank() && !record.customName.equals(record.displayCategory, ignoreCase = true)) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "• ${record.customName}",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    Text(
+                        text = "${dateFormat.format(Date(record.timestamp))} · ${record.transactionSource.replace("MANUAL_", "")}",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Text(
+                text = "${if (isDebit) "- " else "+ "}₹${com.shakeexpense.app.ui.design.FinancialFormatter.formatCents(record.amountCents)}",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = com.shakeexpense.app.ui.design.FinancialFormatter.TabularFontFamily,
+                color = if (isDebit) Color(0xFFEF4444) else Color(0xFF10B981)
+            )
+        }
+    }
+}
+

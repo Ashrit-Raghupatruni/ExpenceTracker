@@ -11,35 +11,15 @@ class ShakeExpenseApp : Application() {
 
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    val database: AppDatabase by lazy {
-        AppDatabase.getInstance(this, applicationScope)
+    val container: com.shakeexpense.app.di.AppContainer by lazy {
+        com.shakeexpense.app.di.AppContainer(this, applicationScope)
     }
 
-    val spendingAlertNotificationManager: com.shakeexpense.app.notification.SpendingAlertNotificationManager by lazy {
-        com.shakeexpense.app.notification.SpendingAlertNotificationManager(this)
-    }
-
-    val entitlementManager: com.shakeexpense.app.domain.usecase.EntitlementManager by lazy {
-        com.shakeexpense.app.domain.usecase.EntitlementManager()
-    }
-
-    val transactionPipeline: com.shakeexpense.app.domain.pipeline.TransactionEventPipeline by lazy {
-        com.shakeexpense.app.domain.pipeline.TransactionEventPipeline(
-            expenseDao = database.expenseDao(),
-            financialProfileDao = database.financialProfileDao(),
-            familyGroupDao = database.familyGroupDao(),
-            familyMemberDao = database.familyMemberDao(),
-            familyBudgetDao = database.familyBudgetDao(),
-            recurringPaymentDao = database.recurringPaymentDao(),
-            notificationManager = spendingAlertNotificationManager,
-            categoryDao = database.categoryDao(),
-            pipelineScope = applicationScope
-        )
-    }
-
-    val expenseRepository: com.shakeexpense.app.data.repository.ExpenseRepository by lazy {
-        com.shakeexpense.app.data.repository.ExpenseRepositoryImpl(database.expenseDao(), transactionPipeline)
-    }
+    val database: AppDatabase get() = container.database
+    val spendingAlertNotificationManager: com.shakeexpense.app.notification.SpendingAlertNotificationManager get() = container.spendingAlertNotificationManager
+    val entitlementManager: com.shakeexpense.app.domain.usecase.EntitlementManager get() = container.entitlementManager
+    val transactionPipeline: com.shakeexpense.app.domain.pipeline.TransactionEventPipeline get() = container.transactionPipeline
+    val expenseRepository: com.shakeexpense.app.data.repository.ExpenseRepository get() = container.expenseRepository
 
     override fun onCreate() {
         super.onCreate()
