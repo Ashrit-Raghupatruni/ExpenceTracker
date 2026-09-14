@@ -86,8 +86,8 @@ class TrackerViewModel(
             combine(
                 profileFlow,
                 recurringFlow,
-                getSpendingTotalsUseCase(),
-                getSpreadsheetStreamUseCase()
+                getSpendingTotalsUseCase(targetUserId),
+                getSpreadsheetStreamUseCase(targetUserId)
             ) { profile, recurring, totals, records ->
                 val plan = try {
                     SubscriptionPlan.valueOf(profile?.tier ?: "FREE")
@@ -239,9 +239,9 @@ class TrackerViewModel(
     private fun observeTrackerData() {
         viewModelScope.launch {
             combine(
-                getSpreadsheetStreamUseCase(),
-                getSpendingTotalsUseCase(),
-                getCategoryBreakdownUseCase()
+                getSpreadsheetStreamUseCase(targetUserId),
+                getSpendingTotalsUseCase(targetUserId),
+                getCategoryBreakdownUseCase(targetUserId)
             ) { records, totals, breakdowns ->
                 Triple(records, totals, breakdowns)
             }.collect { (records, totals, breakdowns) ->

@@ -186,25 +186,30 @@ fun QuickEntryOverlayScreen(
                     }
                 }
 
-                // Custom category input if "Others" is selected
-                AnimatedVisibility(
-                    visible = state.isOthersSelected,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    OutlinedTextField(
-                        value = state.customCategoryName,
-                        onValueChange = { viewModel.onCustomCategoryNameChanged(it) },
-                        label = { Text("Custom category name") },
-                        placeholder = { Text("e.g. Books, Coffee, Gym") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    )
+                // Detail Notes Text Input (e.g. food -> idly, transport -> auto)
+                val notePlaceholder = when (state.selectedCategory?.name?.lowercase()) {
+                    "food" -> "e.g. Idly, Lunch, Coffee, Snacks"
+                    "transport" -> "e.g. Auto, Metro, Cab, Fuel"
+                    "groceries" -> "e.g. Vegetables, Milk, Supermarket"
+                    "bills" -> "e.g. Electricity, Wifi, Rent"
+                    "shopping" -> "e.g. Clothes, Shoes, Electronics"
+                    "entertainment" -> "e.g. Movie, Concert, Games"
+                    "others" -> "e.g. Books, Gym, Gift"
+                    else -> "e.g. Idly, Auto, Notes (Optional)"
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = state.noteInput,
+                    onValueChange = { viewModel.onNoteChanged(it) },
+                    label = { Text(if (state.isOthersSelected) "Category / Note" else "Note (Optional)") },
+                    placeholder = { Text(notePlaceholder) },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Hero Amount Display
                 Surface(

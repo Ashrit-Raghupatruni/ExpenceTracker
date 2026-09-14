@@ -27,6 +27,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -34,6 +37,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
@@ -42,6 +47,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -686,77 +692,128 @@ fun ConsolidatedTotalsHeader(
 
             // Safe to Spend Signature Feature Card
             if (safeToSpend != null) {
+                var isSafeToSpendExpanded by rememberSaveable { mutableStateOf(true) }
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color(0xFF0F766E).copy(alpha = 0.35f))
-                        .clickable { onOpenBudgetSetup() }
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "🛡️ SAFE TO SPEND TODAY",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF5EEAD4),
-                            letterSpacing = 0.5.sp
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "₹ ${formatCurrency(safeToSpend.safeToSpendTodayCents)}",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Black,
-                            fontFamily = FontFamily.Monospace,
-                            color = Color(0xFFCCFBF1)
-                        )
-                        Text(
-                            text = if (safeToSpend.monthlyIncomeCents > 0) {
-                                "₹${formatCurrency(safeToSpend.safeToSpendMonthlyCents)} safe remaining · ${safeToSpend.daysRemainingInCycle} days left"
-                            } else {
-                                "Tap to configure monthly income & savings goal"
-                            },
-                            fontSize = 10.sp,
-                            color = Color(0xFF99F6E4)
-                        )
+                    // Header Row with Title, summary (if collapsed), and Arrow Toggle
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isSafeToSpendExpanded = !isSafeToSpendExpanded },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "🛡️ SAFE TO SPEND TODAY",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF5EEAD4),
+                                letterSpacing = 0.5.sp
+                            )
+                            if (!isSafeToSpendExpanded) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "₹${formatCurrency(safeToSpend.safeToSpendTodayCents)}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = Color(0xFFCCFBF1)
+                                )
+                            }
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isSafeToSpendExpanded) {
+                                Text(
+                                    text = "Setup",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF5EEAD4),
+                                    modifier = Modifier
+                                        .clickable { onOpenBudgetSetup() }
+                                        .padding(end = 4.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = { isSafeToSpendExpanded = !isSafeToSpendExpanded },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isSafeToSpendExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isSafeToSpendExpanded) "Hide Safe to Spend" else "Show Safe to Spend",
+                                    tint = Color(0xFF5EEAD4),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                     }
-                    Text(
-                        text = "Setup >",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF5EEAD4)
-                    )
+
+                    // Expandable Details
+                    AnimatedVisibility(
+                        visible = isSafeToSpendExpanded,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
+                    ) {
+                        Column(modifier = Modifier.padding(top = 4.dp)) {
+                            Text(
+                                text = "₹ ${formatCurrency(safeToSpend.safeToSpendTodayCents)}",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Black,
+                                fontFamily = FontFamily.Monospace,
+                                color = Color(0xFFCCFBF1)
+                            )
+                            Text(
+                                text = if (safeToSpend.monthlyIncomeCents > 0) {
+                                    "₹${formatCurrency(safeToSpend.safeToSpendMonthlyCents)} safe remaining · ${safeToSpend.daysRemainingInCycle} days left"
+                                } else {
+                                    "Tap to configure monthly income & savings goal"
+                                },
+                                fontSize = 10.sp,
+                                color = Color(0xFF99F6E4)
+                            )
+                        }
+                    }
                 }
             }
 
             // Monthly Limit Pacing Bar
             if (spendingLimitState != null && spendingLimitState.activeMonthlyLimitCents > 0L) {
+                var isMonthlyLimitExpanded by rememberSaveable { mutableStateOf(true) }
                 Spacer(modifier = Modifier.height(10.dp))
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color(0xFF1E3A8A).copy(alpha = 0.35f))
-                        .clickable { onOpenLimitEdit() }
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "📊 MONTHLY LIMIT PACING",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF93C5FD),
-                                letterSpacing = 0.5.sp
-                            )
+                    // Header Row with Title, Status badge, and Arrow Toggle
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isMonthlyLimitExpanded = !isMonthlyLimitExpanded },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "📊 MONTHLY LIMIT PACING",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF93C5FD),
+                            letterSpacing = 0.5.sp
+                        )
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "${spendingLimitState.usagePercentage.toInt()}% used",
                                 fontSize = 10.sp,
@@ -768,33 +825,58 @@ fun ConsolidatedTotalsHeader(
                                     SpendingLimitWarningLevel.NORMAL -> Color(0xFF34D399)
                                 }
                             )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            if (isMonthlyLimitExpanded) {
+                                Text(
+                                    text = "Edit",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF93C5FD),
+                                    modifier = Modifier
+                                        .clickable { onOpenLimitEdit() }
+                                        .padding(end = 4.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = { isMonthlyLimitExpanded = !isMonthlyLimitExpanded },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isMonthlyLimitExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isMonthlyLimitExpanded) "Hide Monthly Limit Pacing" else "Show Monthly Limit Pacing",
+                                    tint = Color(0xFF93C5FD),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        LinearProgressIndicator(
-                            progress = { (spendingLimitState.usagePercentage / 100.0).toFloat().coerceIn(0f, 1f) },
-                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                            color = when (spendingLimitState.warningLevel) {
-                                SpendingLimitWarningLevel.EXCEEDED -> Color(0xFFEF4444)
-                                SpendingLimitWarningLevel.NINETY_PERCENT -> Color(0xFFF97316)
-                                SpendingLimitWarningLevel.EIGHTY_PERCENT, SpendingLimitWarningLevel.SEVENTY_PERCENT -> Color(0xFFFBBF24)
-                                SpendingLimitWarningLevel.NORMAL -> Color(0xFF34D399)
-                            },
-                            trackColor = Color(0xFF334155)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "₹${formatCurrency(spendingLimitState.currentMonthExpensesCents)} spent of ₹${formatCurrency(spendingLimitState.activeMonthlyLimitCents)} limit",
-                            fontSize = 10.sp,
-                            color = Color(0xFFBFDBFE)
-                        )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Edit >",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF93C5FD)
-                    )
+
+                    // Expandable Details
+                    AnimatedVisibility(
+                        visible = isMonthlyLimitExpanded,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
+                    ) {
+                        Column(modifier = Modifier.padding(top = 6.dp)) {
+                            LinearProgressIndicator(
+                                progress = { (spendingLimitState.usagePercentage / 100.0).toFloat().coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                color = when (spendingLimitState.warningLevel) {
+                                    SpendingLimitWarningLevel.EXCEEDED -> Color(0xFFEF4444)
+                                    SpendingLimitWarningLevel.NINETY_PERCENT -> Color(0xFFF97316)
+                                    SpendingLimitWarningLevel.EIGHTY_PERCENT, SpendingLimitWarningLevel.SEVENTY_PERCENT -> Color(0xFFFBBF24)
+                                    SpendingLimitWarningLevel.NORMAL -> Color(0xFF34D399)
+                                },
+                                trackColor = Color(0xFF334155)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "₹${formatCurrency(spendingLimitState.currentMonthExpensesCents)} spent of ₹${formatCurrency(spendingLimitState.activeMonthlyLimitCents)} limit",
+                                fontSize = 10.sp,
+                                color = Color(0xFFBFDBFE)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -1033,7 +1115,7 @@ fun SpreadsheetDataGrid(
                                 modifier = Modifier.weight(1.3f)
                             )
 
-                            // Category Column (with color dot & custom label)
+                            // Category Column (with color dot & custom label/note)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.weight(1.6f)
@@ -1043,16 +1125,29 @@ fun SpreadsheetDataGrid(
                                         .size(7.dp)
                                         .clip(CircleShape)
                                         .background(parseColorHex(record.categoryColor))
-                                    )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = record.displayCategory,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
                                 )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Column {
+                                    Text(
+                                        text = record.displayCategory,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    val noteText = record.customName?.trim()
+                                    if (!noteText.isNullOrBlank() && !noteText.equals(record.displayCategory, ignoreCase = true)) {
+                                        Text(
+                                            text = noteText,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Normal,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
                             }
 
                             // Type Column (DEBIT / CREDIT Badge)

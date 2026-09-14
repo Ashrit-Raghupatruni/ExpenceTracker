@@ -18,6 +18,7 @@ interface SyncApiClient {
     suspend fun fetchUserFamilyMembership(userId: String): Result<Pair<FamilyGroupDto?, List<FamilyMemberDto>>>
     suspend fun fetchFamilyMembers(familyId: String): Result<List<FamilyMemberDto>>
     suspend fun deleteExpenses(uuids: List<String>): Result<Unit>
+    suspend fun updateFamilySpendingLimit(familyId: String, limitCents: Long): Result<Unit>
 }
 
 object SyncApiClientProvider {
@@ -204,6 +205,14 @@ class BackendSyncApiClient(
         val set = uuids.toSet()
         for ((_, expList) in remoteExpenses) {
             expList.removeAll { it.uuid in set }
+        }
+        Result.success(Unit)
+    }
+
+    override suspend fun updateFamilySpendingLimit(familyId: String, limitCents: Long): Result<Unit> = withContext(Dispatchers.IO) {
+        val current = remoteFamilies[familyId]
+        if (current != null) {
+            remoteFamilies[familyId] = current.copy(monthlySpendingLimitCents = limitCents)
         }
         Result.success(Unit)
     }

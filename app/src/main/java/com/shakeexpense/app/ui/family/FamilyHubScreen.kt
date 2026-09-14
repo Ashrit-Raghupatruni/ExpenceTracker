@@ -184,13 +184,13 @@ fun FamilyHubScreen(
             // Sync message banner
             if (state.syncMessage != null) {
                 Surface(
-                    color = Color(0xFFEFF6FF),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = state.syncMessage ?: "",
                         fontSize = 12.sp,
-                        color = Color(0xFF1D4ED8),
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                     )
                 }
@@ -1315,7 +1315,7 @@ fun SharedFamilyBudgetsSection(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Shared Family Budgets",
                         fontSize = 15.sp,
@@ -1329,10 +1329,21 @@ fun SharedFamilyBudgetsSection(
                     )
                 }
 
-                TextButton(onClick = onAddBudget) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text("+ Add Budget", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF2563EB).copy(alpha = 0.15f),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onAddBudget() }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF3B82F6), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Add Budget", color = Color(0xFF3B82F6), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -1340,14 +1351,14 @@ fun SharedFamilyBudgetsSection(
 
             if (state.sharedBudgets.isEmpty()) {
                 Surface(
-                    color = Color(0xFFF8FAFC),
-                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = "No shared family budget has been created yet.",
                         fontSize = 12.sp,
-                        color = Color(0xFF64748B),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(14.dp)
                     )
                 }
@@ -1372,7 +1383,7 @@ private fun SharedBudgetRow(
     val barColor = if (budget.isExceeded) Color(0xFFDC2626) else if (pctDisplay >= 80.0) Color(0xFFD97706) else Color(0xFF2563EB)
 
     Surface(
-        color = Color(0xFFF8FAFC),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
         shape = RoundedCornerShape(10.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1392,7 +1403,7 @@ private fun SharedBudgetRow(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete Budget", tint = Color(0xFF94A3B8), modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Delete, contentDescription = "Delete Budget", tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -1406,7 +1417,7 @@ private fun SharedBudgetRow(
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
                 color = barColor,
-                trackColor = Color(0xFFE2E8F0)
+                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
             )
         }
     }
@@ -1502,52 +1513,113 @@ fun EditFamilyLimitDialog(
     )
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun AddCategoryBudgetDialog(
     onDismiss: () -> Unit,
     onSave: (String, Long) -> Unit
 ) {
-    val categories = listOf("Food", "Transport", "Groceries", "Bills", "Shopping", "Entertainment", "Education", "Health", "Others")
-    var selectedCategory by remember { mutableStateOf(categories.first()) }
+    val categoryList = listOf(
+        Pair("Food", Color(0xFFF59E0B)),
+        Pair("Transport", Color(0xFF3B82F6)),
+        Pair("Groceries", Color(0xFF10B981)),
+        Pair("Bills", Color(0xFF8B5CF6)),
+        Pair("Shopping", Color(0xFFEC4899)),
+        Pair("Entertainment", Color(0xFFA855F7)),
+        Pair("Education", Color(0xFF6366F1)),
+        Pair("Health", Color(0xFFEF4444)),
+        Pair("Others", Color(0xFF64748B))
+    )
+    var selectedCategory by remember { mutableStateOf(categoryList.first().first) }
     var limitInput by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set Shared Category Budget", fontWeight = FontWeight.Bold) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    tint = Color(0xFF2563EB),
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Set Shared Category Budget", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            }
+        },
         text = {
-            Column {
-                Text("Select a category and specify the family's monthly budget limit:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    text = "Select a category and specify the monthly spending limit for the entire family:",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text("Category:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Text(
+                    text = "SELECT CATEGORY",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+
+                androidx.compose.foundation.layout.FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    categories.take(4).forEach { cat ->
-                        OutlinedButton(
-                            onClick = { selectedCategory = cat },
-                            colors = if (selectedCategory == cat) ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFFEFF6FF)) else ButtonDefaults.outlinedButtonColors(),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
+                    categoryList.forEach { (catName, catColor) ->
+                        val isSelected = selectedCategory.equals(catName, ignoreCase = true)
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isSelected) catColor.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) catColor else Color.Transparent
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable { selectedCategory = catName }
                         ) {
-                            Text(cat, fontSize = 10.sp, maxLines = 1)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(catColor)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = catName,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) catColor else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
+
                 OutlinedTextField(
                     value = limitInput,
                     onValueChange = {
                         limitInput = it
                         error = null
                     },
-                    label = { Text("$selectedCategory Budget (₹)") },
+                    label = { Text("$selectedCategory Monthly Limit (₹)") },
+                    placeholder = { Text("e.g. 5000") },
                     singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    ),
                     isError = error != null,
                     supportingText = error?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                     modifier = Modifier.fillMaxWidth()
@@ -1559,14 +1631,16 @@ fun AddCategoryBudgetDialog(
                 onClick = {
                     val amount = limitInput.toLongOrNull()
                     if (amount == null || amount <= 0L) {
-                        error = "Enter a valid amount"
+                        error = "Please enter an amount greater than ₹0"
+                    } else if (amount > 10_000_000L) {
+                        error = "Amount exceeds limit"
                     } else {
                         onSave(selectedCategory, amount)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
             ) {
-                Text("Save")
+                Text("Save Budget", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {

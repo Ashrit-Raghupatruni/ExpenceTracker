@@ -101,7 +101,8 @@ class FamilyRepositoryImpl(
                     familyName = it.familyName,
                     creatorUserId = it.ownerUid,
                     inviteCode = it.inviteCode,
-                    createdAt = it.createdAt
+                    createdAt = it.createdAt,
+                    monthlySpendingLimitCents = it.monthlySpendingLimitCents
                 )
             }
         }
@@ -113,7 +114,8 @@ class FamilyRepositoryImpl(
             familyName = family.familyName,
             inviteCode = family.inviteCode,
             ownerUid = family.creatorUserId,
-            createdAt = family.createdAt
+            createdAt = family.createdAt,
+            monthlySpendingLimitCents = family.monthlySpendingLimitCents
         )
         familyGroupDao?.insertFamilyGroup(entity)
     }

@@ -6,6 +6,7 @@ import com.shakeexpense.app.domain.model.TransactionType
 data class ExpenseEntryState(
     val categories: List<CategoryEntity> = emptyList(),
     val selectedCategory: CategoryEntity? = null,
+    val noteInput: String = "",
     val customCategoryName: String = "",
     val amountInput: String = "",
     val transactionType: TransactionType = TransactionType.DEBIT,

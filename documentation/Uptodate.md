@@ -72,3 +72,16 @@
      - Aligned unused recurring subscription notification threshold math to 45 days matching alert text.
    - **System Health Report Added**:
      - Generated [Health.md](Health.md) documenting 100% test suite pass rate (95/95 unit tests), zero compiler warnings, and runtime APK verification on target hardware.
+
+9. **Collapsible UI Controls, Personal Isolation & Family Limit Synchronization (Audit v2.2 - 2026-09-11):**
+   - **Collapsible Dashboard Widgets**:
+     - Added arrow up/down collapse/expand toggle buttons to Safe to Spend and Monthly Limit Pacing cards on the Tracker tab with persistent `rememberSaveable` state.
+     - Added a master toggle button to the Help & Documentation header in Profile to collapse/expand all 18 guides at once, while retaining individual accordion toggles for each guide.
+   - **Personal vs. Family Expense Isolation**:
+     - Resolved expense bleed where family members' transactions were appearing in personal Tracker spreadsheets.
+     - Scoped Tracker queries strictly to `targetUserId`, while the Family tab aggregates all family member debits.
+   - **Family Monthly Limit Calculation & Reactive Cloud Sync**:
+     - Mapped `monthlySpendingLimitCents` across Room SQLite `family_groups`, repository DTOs, and Firestore cloud documents.
+     - Updated family limit spending to compute current-calendar-month debits reactively with live flow observation.
+   - **Zero Data Reset**:
+     - Completely non-destructive update preserving all user accounts, transaction histories, categories, and family links.

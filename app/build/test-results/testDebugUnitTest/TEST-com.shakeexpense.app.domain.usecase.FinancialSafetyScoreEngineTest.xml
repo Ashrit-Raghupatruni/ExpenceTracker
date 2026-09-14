@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.shakeexpense.app.domain.usecase.FinancialSafetyScoreEngineTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-08-29T07:15:57" hostname="ASHRIT" time="0.001">
-  <properties/>
-  <testcase name="test healthy budget and savings produces high score" classname="com.shakeexpense.app.domain.usecase.FinancialSafetyScoreEngineTest" time="0.0"/>
-  <testcase name="test zero data returns null respecting no fake data rule" classname="com.shakeexpense.app.domain.usecase.FinancialSafetyScoreEngineTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

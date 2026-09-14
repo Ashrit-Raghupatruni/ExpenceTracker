@@ -30,22 +30,26 @@ data class SpendingTotals(
 class GetSpreadsheetStreamUseCase(
     private val expenseRepository: ExpenseRepository
 ) {
-    operator fun invoke(): Flow<List<ExpenseRecordItem>> =
-        expenseRepository.getSpreadsheetStream()
+    operator fun invoke(userId: String? = null): Flow<List<ExpenseRecordItem>> =
+        if (userId != null) expenseRepository.getExpensesByUserId(userId)
+        else expenseRepository.getSpreadsheetStream()
 }
 
 class GetCategoryBreakdownUseCase(
     private val expenseRepository: ExpenseRepository
 ) {
-    operator fun invoke(): Flow<List<CategorySubtotal>> =
-        expenseRepository.getAllCategoryBreakdown()
+    operator fun invoke(userId: String? = null): Flow<List<CategorySubtotal>> =
+        if (userId != null) expenseRepository.getMemberCategoryBreakdown(userId)
+        else expenseRepository.getAllCategoryBreakdown()
 }
 
 class GetSpendingTotalsUseCase(
     private val expenseRepository: ExpenseRepository
 ) {
-    operator fun invoke(): Flow<SpendingTotals> {
-        return expenseRepository.getSpreadsheetStream().map { records ->
+    operator fun invoke(userId: String? = null): Flow<SpendingTotals> {
+        val stream = if (userId != null) expenseRepository.getExpensesByUserId(userId)
+                     else expenseRepository.getSpreadsheetStream()
+        return stream.map { records ->
             calculateTotals(records, System.currentTimeMillis())
         }
     }

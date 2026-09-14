@@ -34,11 +34,7 @@ class AddExpenseUseCase(
             return Result.failure(IllegalArgumentException("A valid category must be selected."))
         }
 
-        val trimmedCustomName = if (categoryName.equals("Others", ignoreCase = true)) {
-            customName?.trim()?.ifBlank { null }
-        } else {
-            customName?.trim()
-        }
+        val trimmedCustomName = customName?.trim()?.ifBlank { null }
 
         val expense = Expense(
             id = 0,

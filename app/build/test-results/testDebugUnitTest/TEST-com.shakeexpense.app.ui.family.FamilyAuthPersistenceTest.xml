@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.shakeexpense.app.ui.family.FamilyAuthPersistenceTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-08-29T07:15:58" hostname="ASHRIT" time="0.367">
-  <properties/>
-  <testcase name="testJoinFamilyMaintainsUserAuth" classname="com.shakeexpense.app.ui.family.FamilyAuthPersistenceTest" time="0.342"/>
-  <testcase name="testFamilyRestorationAfterAppRestart" classname="com.shakeexpense.app.ui.family.FamilyAuthPersistenceTest" time="0.011"/>
-  <testcase name="testCreateFamilyMaintainsUserAuthAndPersistsGroup" classname="com.shakeexpense.app.ui.family.FamilyAuthPersistenceTest" time="0.013"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

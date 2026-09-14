@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.shakeexpense.app.domain.usecase.EntitlementManagerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-08-29T07:15:56" hostname="ASHRIT" time="0.002">
-  <properties/>
-  <testcase name="testFreePlan_doesNotAllowAdvancedSearchOrCsvExport" classname="com.shakeexpense.app.domain.usecase.EntitlementManagerTest" time="0.0"/>
-  <testcase name="testFamilyProPlan_allowsAllCapabilities" classname="com.shakeexpense.app.domain.usecase.EntitlementManagerTest" time="0.001"/>
-  <testcase name="testPlusPlan_allowsIndividualIntelligence" classname="com.shakeexpense.app.domain.usecase.EntitlementManagerTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

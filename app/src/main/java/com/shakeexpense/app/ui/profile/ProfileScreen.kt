@@ -34,12 +34,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
@@ -54,6 +57,11 @@ import androidx.compose.material.icons.filled.SyncProblem
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -67,6 +75,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.rememberDatePickerState
@@ -80,6 +89,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
@@ -407,6 +417,19 @@ fun ProfileScreen(
         )
     }
 
+    if (state.isAddOrEditRecurringDialogOpen) {
+        AddEditRecurringPaymentDialog(
+            existingPayment = state.editingRecurringPayment,
+            onDismiss = { viewModel.dismissRecurringDialog() },
+            onSave = { id, name, amountRupees, cadence, categoryId ->
+                viewModel.saveRecurringPayment(id, name, amountRupees, cadence, categoryId)
+            },
+            onDelete = { id ->
+                viewModel.deleteRecurringPayment(id)
+            }
+        )
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -718,7 +741,10 @@ fun ProfileScreen(
             SubscriptionsSummaryCard(
                 subscriptions = state.recurringPayments,
                 annualBurdenCents = state.recurringAnnualBurdenCents,
-                unusedWarnings = state.recurringUnusedWarnings
+                unusedWarnings = state.recurringUnusedWarnings,
+                onAddSubscription = { viewModel.openAddRecurringDialog() },
+                onEditSubscription = { payment -> viewModel.openEditRecurringDialog(payment) },
+                onDeleteSubscription = { id -> viewModel.deleteRecurringPayment(id) }
             )
         }
 
@@ -873,6 +899,8 @@ fun ProfileScreen(
 
         // 6. Help & Documentation Card
         item {
+            var isHelpDocsExpanded by rememberSaveable { mutableStateOf(false) }
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -885,31 +913,61 @@ fun ProfileScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Header Row (Clickable to collapse/expand all documents)
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isHelpDocsExpanded = !isHelpDocsExpanded },
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Help & Documentation",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Help & Documentation",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (isHelpDocsExpanded) "18 user guides & documentation topics" else "Tap to view 18 guides & troubleshooting docs",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { isHelpDocsExpanded = !isHelpDocsExpanded },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isHelpDocsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = if (isHelpDocsExpanded) "Hide All Documents" else "Show All Documents",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
 
-                    Text(
-                        text = "Everything you need to know about tracking, gestures, permissions, and family sync.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                    // Expandable List of Guides
+                    AnimatedVisibility(
+                        visible = isHelpDocsExpanded,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
                     GuideAccordionItem(
                         title = "💡 1. What is ShakeExpense?",
@@ -1000,6 +1058,8 @@ fun ProfileScreen(
                         title = "🔔 18. Spending Limit Alerts & Anti-Spam",
                         content = "Get notified at 70%, 80%, 90%, and 100% of your personal or family spending limit. The smart anti-spam engine guarantees you only receive one alert per threshold each calendar month, preventing notification floods."
                     )
+                        }
+                    }
                 }
             }
 
@@ -1642,13 +1702,31 @@ fun ScorePill(label: String, score: String) {
     }
 }
 
+data class RecurringCategoryInfo(val id: Long, val name: String, val color: Color)
+
+val RECURRING_CATEGORIES = listOf(
+    RecurringCategoryInfo(1L, "Food", Color(0xFFF59E0B)),
+    RecurringCategoryInfo(2L, "Transport", Color(0xFF3B82F6)),
+    RecurringCategoryInfo(3L, "Groceries", Color(0xFF10B981)),
+    RecurringCategoryInfo(4L, "Bills", Color(0xFF8B5CF6)),
+    RecurringCategoryInfo(5L, "Shopping", Color(0xFFEC4899)),
+    RecurringCategoryInfo(6L, "Entertainment", Color(0xFFA855F7)),
+    RecurringCategoryInfo(7L, "Education", Color(0xFF6366F1)),
+    RecurringCategoryInfo(8L, "Health", Color(0xFFEF4444)),
+    RecurringCategoryInfo(9L, "Others", Color(0xFF64748B))
+)
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SubscriptionsSummaryCard(
     subscriptions: List<com.shakeexpense.app.data.database.entity.RecurringPaymentEntity>,
     annualBurdenCents: Long,
-    unusedWarnings: List<String>
+    unusedWarnings: List<String>,
+    onAddSubscription: () -> Unit = {},
+    onEditSubscription: (com.shakeexpense.app.data.database.entity.RecurringPaymentEntity) -> Unit = {},
+    onDeleteSubscription: (Long) -> Unit = {}
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(true) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1663,13 +1741,16 @@ fun SubscriptionsSummaryCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded },
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { expanded = !expanded }
+                ) {
                     Text(text = "🔄", fontSize = 18.sp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
@@ -1681,25 +1762,61 @@ fun SubscriptionsSummaryCard(
                         )
                         Text(
                             text = if (subscriptions.isNotEmpty()) {
-                                "${subscriptions.size} active services · ₹${annualBurdenCents / 100}/year"
+                                "${subscriptions.size} active services · ₹${annualBurdenCents / 100}/yr"
                             } else {
-                                "No subscriptions detected yet"
+                                "Manage or add recurring bills & services"
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onAddSubscription() }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Add Subscription",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Add",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = { expanded = !expanded },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (expanded) "Collapse" else "Expand",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
 
             if (subscriptions.isEmpty()) {
                 Text(
-                    text = "No recurring payments detected yet. As you record transactions or receive bank alerts, recurring payments (e.g. Netflix, Rent, EMI) will automatically be recognized.",
+                    text = "No recurring payments detected yet. As you record transactions or receive bank alerts, recurring payments (e.g. Netflix, Rent, EMI) will automatically be recognized, or you can manually tap '+ Add' above.",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 15.sp
@@ -1730,41 +1847,384 @@ fun SubscriptionsSummaryCard(
             }
 
             // Expanded list
-            if (expanded) {
+            if (expanded && subscriptions.isNotEmpty()) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 subscriptions.forEach { sub ->
-                    Row(
+                    val categoryInfo = RECURRING_CATEGORIES.find { it.id == sub.categoryId } ?: RECURRING_CATEGORIES.first { it.id == 4L }
+                    val isYearly = sub.cadence.equals("YEARLY", ignoreCase = true)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .clickable { onEditSubscription(sub) }
                     ) {
-                        Column {
-                            Text(
-                                text = sub.name,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = sub.cadence,
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = sub.name,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = categoryInfo.color.copy(alpha = 0.15f)
+                                    ) {
+                                        Text(
+                                            text = categoryInfo.name,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = categoryInfo.color,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (isYearly) "Yearly (₹${sub.amountCents / 100}/yr)" else "Monthly (₹${sub.amountCents / 100}/mo)",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = if (isYearly) "₹${sub.amountCents / 100}/yr" else "₹${sub.amountCents / 100}/mo",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                IconButton(
+                                    onClick = { onEditSubscription(sub) },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
                         }
-                        Text(
-                            text = "₹${sub.amountCents / 100}/mo",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.primary
-                        )
                     }
                 }
             }
         }
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun AddEditRecurringPaymentDialog(
+    existingPayment: com.shakeexpense.app.data.database.entity.RecurringPaymentEntity?,
+    onDismiss: () -> Unit,
+    onSave: (id: Long, name: String, amountRupees: Long, cadence: String, categoryId: Long) -> Unit,
+    onDelete: (id: Long) -> Unit
+) {
+    var nameInput by remember { mutableStateOf(existingPayment?.name ?: "") }
+    var amountInput by remember {
+        mutableStateOf(
+            if (existingPayment != null && existingPayment.amountCents > 0L) {
+                (existingPayment.amountCents / 100L).toString()
+            } else ""
+        )
+    }
+    var selectedCadence by remember {
+        mutableStateOf(
+            if (existingPayment?.cadence?.equals("YEARLY", ignoreCase = true) == true) "YEARLY" else "MONTHLY"
+        )
+    }
+    var selectedCategoryId by remember {
+        mutableStateOf(existingPayment?.categoryId ?: 4L)
+    }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm && existingPayment != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete Recurring Subscription?") },
+            text = { Text("Are you sure you want to remove '${existingPayment.name}'? This will remove it from your recurring burden and future Safe-to-Spend calculations.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDelete(existingPayment.id)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (existingPayment != null) Icons.Default.Edit else Icons.Default.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (existingPayment != null) "Edit Subscription" else "Add Subscription",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Track regular obligations like streaming services, rent, utility bills, or gym memberships.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Service Name Input
+                OutlinedTextField(
+                    value = nameInput,
+                    onValueChange = {
+                        nameInput = it
+                        errorMessage = null
+                    },
+                    label = { Text("Service / Subscription Name") },
+                    placeholder = { Text("e.g. Netflix, Spotify, Gym, Rent, Electricity") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                // Amount Input
+                OutlinedTextField(
+                    value = amountInput,
+                    onValueChange = { input ->
+                        if (input.all { it.isDigit() }) {
+                            amountInput = input
+                            errorMessage = null
+                        }
+                    },
+                    label = { Text("Amount (₹)") },
+                    placeholder = { Text("e.g. 499") },
+                    leadingIcon = {
+                        Text("₹", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                // Billing Frequency (Monthly vs Yearly)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "BILLING FREQUENCY",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Monthly option
+                        val isMonthly = selectedCadence == "MONTHLY"
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isMonthly) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = if (isMonthly) 1.5.dp else 1.dp,
+                                color = if (isMonthly) MaterialTheme.colorScheme.primary else Color.Transparent
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { selectedCadence = "MONTHLY" }
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "Monthly",
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isMonthly) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isMonthly) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Charged ₹/mo",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Yearly option
+                        val isYearly = selectedCadence == "YEARLY"
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isYearly) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = if (isYearly) 1.5.dp else 1.dp,
+                                color = if (isYearly) MaterialTheme.colorScheme.primary else Color.Transparent
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { selectedCadence = "YEARLY" }
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "Yearly",
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isYearly) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isYearly) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Charged ₹/yr",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Category Selector
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "CATEGORY",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        RECURRING_CATEGORIES.forEach { category ->
+                            val isSelected = selectedCategoryId == category.id
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isSelected) category.color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    width = if (isSelected) 1.5.dp else 1.dp,
+                                    color = if (isSelected) category.color else Color.Transparent
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .clickable { selectedCategoryId = category.id }
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .clip(CircleShape)
+                                            .background(category.color)
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = category.name,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage ?: "",
+                        color = Color(0xFFDC2626),
+                        fontSize = 12.sp
+                    )
+                }
+
+                if (existingPayment != null) {
+                    OutlinedButton(
+                        onClick = { showDeleteConfirm = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDC2626).copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Delete Subscription", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val name = nameInput.trim()
+                    val amount = amountInput.toLongOrNull() ?: 0L
+                    if (name.isBlank()) {
+                        errorMessage = "Please enter a service name"
+                        return@Button
+                    }
+                    if (amount <= 0L) {
+                        errorMessage = "Please enter a valid amount greater than ₹0"
+                        return@Button
+                    }
+                    onSave(
+                        existingPayment?.id ?: 0L,
+                        name,
+                        amount,
+                        selectedCadence,
+                        selectedCategoryId
+                    )
+                },
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(if (existingPayment != null) "Save Changes" else "Add Subscription")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable

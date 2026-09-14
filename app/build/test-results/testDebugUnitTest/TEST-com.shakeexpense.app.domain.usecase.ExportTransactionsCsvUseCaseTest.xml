@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.shakeexpense.app.domain.usecase.ExportTransactionsCsvUseCaseTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-08-29T07:15:57" hostname="ASHRIT" time="0.003">
-  <properties/>
-  <testcase name="testFreeTier_returnsNullCsv" classname="com.shakeexpense.app.domain.usecase.ExportTransactionsCsvUseCaseTest" time="0.001"/>
-  <testcase name="testPlusTier_returnsValidCsv" classname="com.shakeexpense.app.domain.usecase.ExportTransactionsCsvUseCaseTest" time="0.002"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

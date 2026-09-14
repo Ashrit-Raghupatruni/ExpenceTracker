@@ -38,5 +38,7 @@ data class ProfileState(
     val safetyRecurringSubScore: String = "🟢 Healthy",
     val safetyRiskSignalsSubScore: String = "🟢 None",
     val subscriptionPlan: SubscriptionPlan = SubscriptionPlan.FREE,
-    val showSubscriptionModal: Boolean = false
+    val showSubscriptionModal: Boolean = false,
+    val isAddOrEditRecurringDialogOpen: Boolean = false,
+    val editingRecurringPayment: RecurringPaymentEntity? = null
 )

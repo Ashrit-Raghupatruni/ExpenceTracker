@@ -368,7 +368,10 @@ class FirestoreSyncApiClient(
                             familyName = familyDoc.getString("familyName") ?: "Family Group",
                             creatorUserId = familyDoc.getString("creatorUserId") ?: "",
                             inviteCode = familyDoc.getString("inviteCode") ?: "",
-                            createdAt = familyDoc.getLong("createdAt") ?: System.currentTimeMillis()
+                            createdAt = familyDoc.getLong("createdAt") ?: System.currentTimeMillis(),
+                            monthlySpendingLimitCents = familyDoc.getLong("monthlySpendingLimitCents")
+                                ?: familyDoc.getLong("monthly_spending_limit_cents")
+                                ?: 0L
                         )
                     } else null
 
@@ -415,6 +418,27 @@ class FirestoreSyncApiClient(
             }
         } catch (e: Exception) {
             // Log cloud error, local fallback handled
+        }
+        Result.success(Unit)
+    }
+
+    override suspend fun updateFamilySpendingLimit(familyId: String, limitCents: Long): Result<Unit> = withContext(Dispatchers.IO) {
+        fallbackClient.updateFamilySpendingLimit(familyId, limitCents)
+        try {
+            ensureAuthenticated()
+            withTimeoutOrNull(TIMEOUT_MS) {
+                val updateMap = hashMapOf<String, Any>(
+                    "monthlySpendingLimitCents" to limitCents,
+                    "monthly_spending_limit_cents" to limitCents,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+                firestore.collection(COLLECTION_FAMILIES)
+                    .document(familyId)
+                    .set(updateMap, SetOptions.merge())
+                    .await()
+            }
+        } catch (e: Exception) {
+            // Fallback handled
         }
         Result.success(Unit)
     }

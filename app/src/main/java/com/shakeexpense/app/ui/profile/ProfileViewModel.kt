@@ -8,6 +8,7 @@ import com.shakeexpense.app.data.database.dao.ExpenseDao
 import com.shakeexpense.app.data.repository.AuthRepository
 import com.shakeexpense.app.data.repository.ExpenseRepository
 import com.shakeexpense.app.data.repository.FamilyRepository
+import com.shakeexpense.app.data.database.entity.RecurringPaymentEntity
 import com.shakeexpense.app.domain.model.FamilyMember
 import com.shakeexpense.app.domain.model.UserProfile
 import com.shakeexpense.app.domain.usecase.GetMonthlyExpenseHistoryUseCase
@@ -157,6 +158,78 @@ class ProfileViewModel(
                     }
                 }
             }
+        }
+    }
+
+    fun openAddRecurringDialog() {
+        _state.update {
+            it.copy(
+                isAddOrEditRecurringDialogOpen = true,
+                editingRecurringPayment = null
+            )
+        }
+    }
+
+    fun openEditRecurringDialog(payment: RecurringPaymentEntity) {
+        _state.update {
+            it.copy(
+                isAddOrEditRecurringDialogOpen = true,
+                editingRecurringPayment = payment
+            )
+        }
+    }
+
+    fun dismissRecurringDialog() {
+        _state.update {
+            it.copy(
+                isAddOrEditRecurringDialogOpen = false,
+                editingRecurringPayment = null
+            )
+        }
+    }
+
+    fun saveRecurringPayment(
+        id: Long,
+        name: String,
+        amountRupees: Long,
+        cadence: String,
+        categoryId: Long
+    ) {
+        if (name.isBlank() || amountRupees <= 0L) return
+        viewModelScope.launch {
+            val userId = authRepository.getCurrentProfile().userId
+            val amountCents = amountRupees * 100L
+            val existing = _state.value.editingRecurringPayment
+            if (id > 0L && existing != null) {
+                val updated = existing.copy(
+                    name = name.trim(),
+                    amountCents = amountCents,
+                    cadence = cadence.uppercase().trim(),
+                    categoryId = categoryId,
+                    isAutoDetected = false
+                )
+                recurringPaymentRepository?.updateRecurringPayment(updated)
+            } else {
+                val newPayment = RecurringPaymentEntity(
+                    id = 0L,
+                    userId = userId,
+                    name = name.trim(),
+                    amountCents = amountCents,
+                    cadence = cadence.uppercase().trim(),
+                    categoryId = categoryId,
+                    isAutoDetected = false,
+                    isActive = true
+                )
+                recurringPaymentRepository?.insertRecurringPayment(newPayment)
+            }
+            dismissRecurringDialog()
+        }
+    }
+
+    fun deleteRecurringPayment(id: Long) {
+        viewModelScope.launch {
+            recurringPaymentRepository?.deleteById(id)
+            dismissRecurringDialog()
         }
     }
 

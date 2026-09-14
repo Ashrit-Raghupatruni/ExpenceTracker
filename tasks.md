@@ -149,4 +149,27 @@
   - 95/95 unit tests passing (`./gradlew testDebugUnitTest`).
   - APK built (`./gradlew assembleDebug`) and installed to physical device `10BE7A08JP0007U`.
 
+---
+
+## Milestone 9: Collapsible UI, Expense Isolation & Family Limit Synchronization
+- [x] Task 9.1: Collapsible UI Controls on Tracker Screen:
+  - Added arrow up/down button to collapse/expand "🛡️ SAFE TO SPEND TODAY" with compact preview in `SpreadsheetScreen.kt`.
+  - Added arrow up/down button to collapse/expand "📊 MONTHLY LIMIT PACING" with compact badge in `SpreadsheetScreen.kt`.
+  - Stored toggle states with `rememberSaveable`.
+- [x] Task 9.2: Master & Individual Help & Documentation Toggles:
+  - Added master header collapse/expand button in `ProfileScreen.kt` to hide/show all 18 documents at once.
+  - Kept individual accordion toggles for each guide topic with independent animated expansion.
+- [x] Task 9.3: Personal Expense Tracker Isolation:
+  - Updated `TrackerDashboardUseCases.kt` and `TrackerViewModel.kt` to filter spreadsheet streams by `targetUserId`.
+  - Prevented other family members' records from showing up on the personal Tracker tab.
+- [x] Task 9.4: Family Monthly Limit Fixes & Reactive Cloud Sync:
+  - Mapped `monthlySpendingLimitCents` in `FamilyRepositoryImpl.getActiveFamilyGroup()` and `saveFamilyGroup()`.
+  - Implemented `updateFamilySpendingLimit` in `SyncApiClient` and `FirestoreSyncApiClient`.
+  - Calculated `totalFamilySpent` and shared category budgets for the current calendar month and observed expenses reactively.
+- [x] Task 9.5: Zero Data Reset & Regression Verification:
+  - Preserved all database tables and user records with zero data reset.
+  - 95/95 unit tests passing (`./gradlew testDebugUnitTest`).
+  - Debug APK built (`./gradlew assembleDebug`).
+
+
 

@@ -173,11 +173,32 @@
   - 100% test pass rate: 95/95 unit tests passing in `./gradlew testDebugUnitTest`.
   - Built debug/release APKs and successfully installed & launched on target Android device (`10BE7A08JP0007U`).
 
+### Phase 15: Collapsible UI Controls, Personal Expense Isolation & Family Limit Synchronization
+- [x] Tracker Screen Collapsible Controls:
+  - Added interactive arrow up/down collapse/expand toggle to "🛡️ SAFE TO SPEND TODAY" with compact summary when collapsed.
+  - Added interactive arrow up/down collapse/expand toggle to "📊 MONTHLY LIMIT PACING" with compact badge when collapsed.
+  - Saved collapse state across configuration changes with `rememberSaveable`.
+- [x] Profile Screen Help & Documentation Master Toggle:
+  - Added master collapse/expand toggle on card header to hide/unhide all 18 documents at once.
+  - Preserved independent accordion expansion for each of the 18 individual guide topics.
+- [x] Personal Expense Tracker Isolation:
+  - Updated `TrackerDashboardUseCases` to stream expenses strictly filtered by `targetUserId`.
+  - Prevented other family members' synced records from bleeding into the personal Tracker tab.
+- [x] Family Monthly Limit Calculation & Reactive Cloud Sync:
+  - Mapped `monthlySpendingLimitCents` in `FamilyRepositoryImpl.getActiveFamilyGroup()` and `saveFamilyGroup()`.
+  - Added `updateFamilySpendingLimit` in `SyncApiClient` and `FirestoreSyncApiClient` to sync limit updates to Firestore.
+  - Updated `FamilyViewModel` to calculate family spending strictly for the current calendar month and observe expense streams reactively.
+- [x] Zero Data Reset:
+  - All database structures, existing records, and user tables preserved with zero data reset.
+- [x] Verification:
+  - 100% unit test pass rate: 95/95 tests passing in `./gradlew testDebugUnitTest`.
+  - Debug APK built successfully with `./gradlew assembleDebug`.
+
 ---
 
 ## 3. Active Workstream
 - **Current Milestone:** Production Release & Closed Testing Complete
   1. **Release Artifacts:** Signed Release AAB (`app-release.aab`) & Signed Release APK (`app-release.apk`) generated with release keystore.
   2. **Security & Privacy:** Hardened Firestore security rules, zero secrets in source, 100% on-device SMS parsing.
-  3. **Quality Assurance:** Full regression verified with 58/58 unit tests passing and physical device runtime testing.
+  3. **Quality Assurance:** Full regression verified with 95/95 unit tests passing and physical device runtime testing.
   4. **Documentation:** 100% synchronized across PRD, TechSpec, Appflow, Design, schema, Rules, Tracker, UserGuide, and Uptodate.

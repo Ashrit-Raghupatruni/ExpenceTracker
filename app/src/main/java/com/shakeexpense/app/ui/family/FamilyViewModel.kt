@@ -70,35 +70,42 @@ class FamilyViewModel(
     }
 
     private fun observeFamilyData() {
+        val expensesStream = expenseRepository?.getSpreadsheetStream() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
         viewModelScope.launch {
             combine(
                 getFamilyMembersUseCase(),
                 familyRepository.getActiveFamilyGroup(),
-                authRepository.userProfile
-            ) { members, activeFamily, profile ->
-                Triple(members, activeFamily, profile.userId)
-            }.collect { (members, activeFamily, currentUid) ->
-                val familyId = activeFamily?.familyId ?: "default_family"
+                authRepository.userProfile,
+                expensesStream
+            ) { members, activeFamily, profile, allExpenses ->
+                FamilyDataBundle(members, activeFamily, profile.userId, allExpenses)
+            }.collect { (members, activeFamily, currentUid, allExpenses) ->
                 val familyLimit = activeFamily?.monthlySpendingLimitCents ?: 0L
 
-                // Calculate spending per member
+                val calendar = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.DAY_OF_MONTH, 1)
+                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    set(java.util.Calendar.MINUTE, 0)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }
+                val startOfMonth = calendar.timeInMillis
+
+                // Calculate spending per member for the current month
                 var totalFamilySpent = 0L
                 val memberSummaries = members.map { member ->
-                    val memberDebits: List<com.shakeexpense.app.domain.model.ExpenseRecordItem> = if (expenseRepository != null) {
-                        try {
-                            expenseRepository.getExpensesByUserId(member.id).firstOrNull()
-                                ?.filter { it.transactionType.equals("DEBIT", ignoreCase = true) } ?: emptyList()
-                        } catch (_: Exception) {
-                            emptyList()
-                        }
-                    } else emptyList()
-
-                    val memberTotal = memberDebits.sumOf { it.amountCents }
+                    val memberDebits = allExpenses.filter {
+                        (it.userId == member.id || (member.id == currentUid && it.userId == "default_local_user")) &&
+                        it.transactionType.equals("DEBIT", ignoreCase = true)
+                    }
+                    val currentMonthDebits = memberDebits.filter { it.timestamp >= startOfMonth }
+                    val memberTotal = currentMonthDebits.sumOf { it.amountCents }
                     totalFamilySpent += memberTotal
                     FamilyMemberWithSummary(
                         member = member,
                         totalDebitCents = memberTotal,
-                        transactionCount = memberDebits.size
+                        transactionCount = currentMonthDebits.size
                     )
                 }
 
@@ -117,26 +124,30 @@ class FamilyViewModel(
 
         // Observe shared category budgets
         viewModelScope.launch {
-            familyRepository.getActiveFamilyGroup().collect { group ->
+            combine(
+                familyRepository.getActiveFamilyGroup(),
+                expensesStream
+            ) { group, allExpenses ->
+                Pair(group, allExpenses)
+            }.collect { (group, allExpenses) ->
                 if (group != null) {
+                    val calendar = java.util.Calendar.getInstance().apply {
+                        set(java.util.Calendar.DAY_OF_MONTH, 1)
+                        set(java.util.Calendar.HOUR_OF_DAY, 0)
+                        set(java.util.Calendar.MINUTE, 0)
+                        set(java.util.Calendar.SECOND, 0)
+                        set(java.util.Calendar.MILLISECOND, 0)
+                    }
+                    val startOfMonth = calendar.timeInMillis
+
                     val budgetsFlow = familyRepository.getFamilyBudgets(group.familyId) ?: kotlinx.coroutines.flow.flowOf(emptyList())
                     budgetsFlow.collect { budgets ->
-                        // Calculate spentCents for each category from member expenses
                         val updatedBudgets = budgets.map { b ->
-                            val catSpent = _state.value.membersWithSummaries.sumOf { mws ->
-                                if (expenseRepository != null) {
-                                    try {
-                                        val list: List<com.shakeexpense.app.domain.model.ExpenseRecordItem> =
-                                            expenseRepository.getExpensesByUserId(mws.member.id).firstOrNull() ?: emptyList()
-                                        list.filter {
-                                            it.transactionType.equals("DEBIT", ignoreCase = true) &&
-                                            it.categoryName.equals(b.categoryName, ignoreCase = true)
-                                        }.sumOf { it.amountCents }
-                                    } catch (_: Exception) {
-                                        0L
-                                    }
-                                } else 0L
-                            }
+                            val catSpent = allExpenses.filter {
+                                it.transactionType.equals("DEBIT", ignoreCase = true) &&
+                                it.timestamp >= startOfMonth &&
+                                it.categoryName.equals(b.categoryName, ignoreCase = true)
+                            }.sumOf { it.amountCents }
                             b.copy(spentCents = catSpent)
                         }
                         _state.update { it.copy(sharedBudgets = updatedBudgets) }
@@ -158,6 +169,13 @@ class FamilyViewModel(
             }
         }
     }
+
+    private data class FamilyDataBundle(
+        val members: List<FamilyMember>,
+        val activeFamily: FamilyGroupDto?,
+        val currentUid: String,
+        val allExpenses: List<com.shakeexpense.app.domain.model.ExpenseRecordItem>
+    )
 
     fun onMemberSelected(member: FamilyMember) {
         _state.update { it.copy(selectedMember = member) }
@@ -388,11 +406,15 @@ class FamilyViewModel(
         }
         viewModelScope.launch {
             val familyId = _state.value.currentFamilyGroup?.familyId ?: return@launch
-            familyRepository.updateFamilySpendingLimit(familyId, limitRupees * 100L)
+            val limitCents = limitRupees * 100L
+            familyRepository.updateFamilySpendingLimit(familyId, limitCents)
+            try {
+                com.shakeexpense.app.sync.SyncApiClientProvider.get().updateFamilySpendingLimit(familyId, limitCents)
+            } catch (_: Exception) {}
             SpendingAlertNotificationManager.resetThresholds(familyId, "FAMILY")
             _state.update {
                 it.copy(
-                    familyMonthlyLimitCents = limitRupees * 100L,
+                    familyMonthlyLimitCents = limitCents,
                     isEditFamilyLimitDialogOpen = false,
                     syncMessage = "Family monthly spending limit set to ₹$limitRupees"
                 )

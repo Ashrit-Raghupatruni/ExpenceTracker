@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.shakeexpense.app.ui.profile.ProfileViewModelTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-08-29T07:15:58" hostname="ASHRIT" time="0.267">
-  <properties/>
-  <testcase name="testResetExpensesDialogAndFlow" classname="com.shakeexpense.app.ui.profile.ProfileViewModelTest" time="0.245"/>
-  <testcase name="testToggleExpandMonth" classname="com.shakeexpense.app.ui.profile.ProfileViewModelTest" time="0.009"/>
-  <testcase name="testThemeModeUpdate" classname="com.shakeexpense.app.ui.profile.ProfileViewModelTest" time="0.012"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

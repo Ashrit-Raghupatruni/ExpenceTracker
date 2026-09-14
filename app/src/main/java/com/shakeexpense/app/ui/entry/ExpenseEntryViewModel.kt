@@ -54,8 +54,12 @@ class ExpenseEntryViewModel(
         }
     }
 
+    fun onNoteChanged(note: String) {
+        _state.update { it.copy(noteInput = note, customCategoryName = note) }
+    }
+
     fun onCustomCategoryNameChanged(name: String) {
-        _state.update { it.copy(customCategoryName = name) }
+        _state.update { it.copy(customCategoryName = name, noteInput = name) }
     }
 
     fun onTransactionTypeChanged(type: TransactionType) {
@@ -83,6 +87,7 @@ class ExpenseEntryViewModel(
                 amountInput = amountStr,
                 transactionType = type,
                 selectedCategory = matchedCategory,
+                noteInput = customName ?: "",
                 customCategoryName = customName ?: "",
                 isOthersSelected = matchedCategory?.name.equals("Others", ignoreCase = true)
             )
@@ -129,7 +134,7 @@ class ExpenseEntryViewModel(
     }
 
     fun onClearPressed() {
-        _state.update { it.copy(amountInput = "", customCategoryName = "", errorMessage = null) }
+        _state.update { it.copy(amountInput = "", noteInput = "", customCategoryName = "", errorMessage = null) }
     }
 
     fun saveExpense(
@@ -152,6 +157,9 @@ class ExpenseEntryViewModel(
 
         viewModelScope.launch {
             val currentUserId = authRepository?.getCurrentProfile()?.userId ?: AppDatabase.DEFAULT_USER_ID
+            val note = currentState.noteInput.trim().ifBlank {
+                if (currentState.isOthersSelected) currentState.customCategoryName.trim().ifBlank { null } else null
+            }
             val result = addExpenseUseCase(
                 categoryId = category.id,
                 categoryName = category.name,
@@ -159,7 +167,7 @@ class ExpenseEntryViewModel(
                 amountCents = amountCents,
                 type = currentState.transactionType,
                 source = source,
-                customName = if (currentState.isOthersSelected) currentState.customCategoryName else null,
+                customName = note,
                 userId = currentUserId
             )
 
@@ -181,6 +189,7 @@ class ExpenseEntryViewModel(
         _state.update {
             it.copy(
                 amountInput = "",
+                noteInput = "",
                 customCategoryName = "",
                 saveSuccess = false,
                 errorMessage = null
