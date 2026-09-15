@@ -8,5 +8,10 @@ data class ParsedBankTransaction(
     val merchantOrPayee: String?,
     val suggestedCategoryId: Long,
     val timestamp: Long,
-    val rawPackageName: String
+    val rawPackageName: String,
+    val bankName: String? = null,
+    val accountLastDigits: String? = null,
+    val upiRefNumber: String? = null,
+    val upiVpa: String? = null,
+    val isReliableFinancialTransaction: Boolean = true
 )

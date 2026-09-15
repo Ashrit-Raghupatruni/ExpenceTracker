@@ -1,6 +1,8 @@
 package com.shakeexpense.app.ui.tracker
 
 import com.shakeexpense.app.data.database.entity.CategoryEntity
+import com.shakeexpense.app.data.database.entity.FinancialProfileEntity
+import com.shakeexpense.app.data.database.entity.RecurringPaymentEntity
 import com.shakeexpense.app.domain.model.CategorySubtotal
 import com.shakeexpense.app.domain.model.ExpenseRecordItem
 import com.shakeexpense.app.domain.model.SubscriptionPlan
@@ -17,6 +19,13 @@ enum class TrackerTab {
     CATEGORY_BREAKDOWN
 }
 
+enum class TrackerSubScreen {
+    NONE,
+    NOTIFICATIONS,
+    FINANCIAL_CALENDAR,
+    CASH_FLOW_FORECAST
+}
+
 enum class SyncDisplayStatus {
     SYNCED,
     NOT_SYNCED_OFFLINE,
@@ -25,6 +34,7 @@ enum class SyncDisplayStatus {
 
 data class TrackerState(
     val selectedTab: TrackerTab = TrackerTab.DASHBOARD,
+    val activeSubScreen: TrackerSubScreen = TrackerSubScreen.NONE,
     val totals: SpendingTotals = SpendingTotals(),
     val records: List<ExpenseRecordItem> = emptyList(),
     val categoryBreakdowns: List<CategorySubtotal> = emptyList(),
@@ -35,6 +45,8 @@ data class TrackerState(
     val syncDisplayStatus: SyncDisplayStatus = SyncDisplayStatus.SYNCED,
     val isLoading: Boolean = false,
     val safeToSpend: SafeToSpendSummary? = null,
+    val financialProfile: FinancialProfileEntity? = null,
+    val recurringPayments: List<RecurringPaymentEntity> = emptyList(),
     val showBudgetSetupDialog: Boolean = false,
     val spendingLimitState: SpendingLimitState? = null,
     val nextMonthPrediction: PredictionResult? = null,
@@ -48,5 +60,7 @@ data class TrackerState(
     val unusualAlerts: List<UnusualSpendingAlert> = emptyList(),
     val showUpgradePaywall: Boolean = false,
     val paywallFeatureTitle: String = "",
-    val csvExportMessage: String? = null
+    val csvExportMessage: String? = null,
+    val readNotificationIds: Set<String> = emptySet(),
+    val dismissedNotificationIds: Set<String> = emptySet()
 )

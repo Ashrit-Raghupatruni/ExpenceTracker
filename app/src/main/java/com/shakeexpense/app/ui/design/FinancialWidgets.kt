@@ -1,8 +1,9 @@
-﻿package com.shakeexpense.app.ui.design
+package com.shakeexpense.app.ui.design
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -10,20 +11,41 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.shakeexpense.app.domain.model.ExpenseRecordItem
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+
+fun getCategoryVectorIcon(categoryName: String?): ImageVector {
+    val name = categoryName?.lowercase() ?: ""
+    return when {
+        name.contains("food") || name.contains("dining") || name.contains("restaurant") || name.contains("cafe") || name.contains("snack") -> Icons.Default.Restaurant
+        name.contains("travel") || name.contains("transport") || name.contains("fuel") || name.contains("cab") || name.contains("auto") || name.contains("metro") -> Icons.Default.DirectionsCar
+        name.contains("shop") || name.contains("cloth") || name.contains("grocer") || name.contains("mart") -> Icons.Default.ShoppingBag
+        name.contains("bill") || name.contains("util") || name.contains("electric") || name.contains("water") || name.contains("gas") || name.contains("wifi") -> Icons.Default.Receipt
+        name.contains("entertain") || name.contains("movie") || name.contains("game") || name.contains("subscript") || name.contains("ott") -> Icons.Default.Movie
+        name.contains("health") || name.contains("medic") || name.contains("doctor") || name.contains("pharm") -> Icons.Default.LocalHospital
+        name.contains("edu") || name.contains("course") || name.contains("book") || name.contains("school") || name.contains("college") -> Icons.Default.School
+        name.contains("income") || name.contains("salary") || name.contains("bonus") || name.contains("credit") -> Icons.Default.Paid
+        name.contains("invest") || name.contains("sip") || name.contains("stock") || name.contains("mutual") -> Icons.Default.AccountBalance
+        name.contains("rent") || name.contains("home") || name.contains("house") -> Icons.Default.Home
+        name.contains("gym") || name.contains("fit") || name.contains("sport") -> Icons.Default.FitnessCenter
+        else -> Icons.Default.Category
+    }
+}
 
 @Composable
 fun SafeToSpendHeroCard(
@@ -78,7 +100,7 @@ fun SafeToSpendHeroCard(
                     IconButton(onClick = onConfigureClick, modifier = Modifier.size(28.dp)) {
                         Icon(
                             imageVector = Icons.Default.Tune,
-                            contentDescription = "Setup Income & Budget",
+                            contentDescription = "Configure Budget",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
@@ -102,14 +124,14 @@ fun SafeToSpendHeroCard(
             ) {
                 Column {
                     Text(
-                        text = "₹",
+                        text = "₹${FinancialFormatter.formatCents(safeTodayCents)}",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.ExtraBold,
                         fontFamily = FinancialFormatter.TabularFontFamily,
                         color = if (isSafe) MaterialTheme.colorScheme.onSurface else ShakeDesignTokens.ExceededRed
                     )
                     Text(
-                        text = if (isConfigured) "Safe daily runway for the remaining  days" else "Tap ⚙️ above to configure monthly income",
+                        text = if (isConfigured) "Safe daily runway for the remaining $daysRemainingInCycle days" else "Tap configure above to set monthly income",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -124,7 +146,6 @@ fun SafeToSpendHeroCard(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
 
-                    // Monthly Progress Bar
                     val budgetRatio = if (incomeCents > 0L) {
                         (spentThisMonthCents.toFloat() / incomeCents.toFloat()).coerceIn(0f, 1f)
                     } else 0f
@@ -135,12 +156,12 @@ fun SafeToSpendHeroCard(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Monthly Spent: ₹",
+                                text = "Spent: ₹${FinancialFormatter.formatCents(spentThisMonthCents)}",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "Remaining: ₹",
+                                text = "Monthly Allowance: ₹${FinancialFormatter.formatCents(remainingMonthCents)}",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -163,6 +184,147 @@ fun SafeToSpendHeroCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun FinancialMetricCard(
+    title: String,
+    amountCents: Long,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    accentColor: Color = MaterialTheme.colorScheme.primary,
+    onClick: (() -> Unit)? = null
+) {
+    GlassCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        elevation = 1.dp,
+        onClick = onClick
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title.uppercase(),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = "₹${FinancialFormatter.formatCents(amountCents)}",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontFamily = FinancialFormatter.TabularFontFamily,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun GlassTransactionRow(
+    record: ExpenseRecordItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val dateFormat = SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault())
+    val isDebit = record.transactionType.equals("DEBIT", ignoreCase = true)
+    val categoryIcon = getCategoryVectorIcon(record.categoryName)
+
+    GlassCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        elevation = 1.dp,
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = categoryIcon,
+                            contentDescription = record.categoryName,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = record.displayCategory,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (!record.customName.isNullOrBlank() && !record.customName.equals(record.displayCategory, ignoreCase = true)) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "· ${record.customName}",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    Text(
+                        text = "${dateFormat.format(Date(record.timestamp))} · ${record.transactionSource.replace("MANUAL_", "")}",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Text(
+                text = "${if (isDebit) "- " else "+ "}₹${FinancialFormatter.formatCents(record.amountCents)}",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FinancialFormatter.TabularFontFamily,
+                color = if (isDebit) ShakeDesignTokens.ExceededRed else ShakeDesignTokens.HealthyGreen
+            )
         }
     }
 }
@@ -226,7 +388,7 @@ fun FinancialSafetyPillCard(
                     color = scoreColor.copy(alpha = 0.15f)
                 ) {
                     Text(
-                        text = " / 100 · ",
+                        text = "$score / 100 · $rating",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = scoreColor,
@@ -288,7 +450,7 @@ fun QuickActionFAB(
         shape = CircleShape,
         color = ShakeDesignTokens.PrimaryIndigo,
         shadowElevation = 6.dp,
-        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color.White.copy(alpha = 0.35f)),
+        border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.35f)),
         modifier = modifier
             .size(56.dp)
             .clip(CircleShape)
@@ -304,3 +466,4 @@ fun QuickActionFAB(
         }
     }
 }
+

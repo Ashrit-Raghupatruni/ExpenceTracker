@@ -1,4 +1,4 @@
-﻿package com.shakeexpense.app.ui.design
+package com.shakeexpense.app.ui.design
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -29,22 +29,23 @@ fun NeuButton(
     shape: Shape = RoundedCornerShape(16.dp),
     containerColor: Color? = null,
     contentColor: Color? = null,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     isPrimary: Boolean = false,
     content: @Composable RowScope.() -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = isAppDarkTheme()
     val bgColor = when {
         isPrimary -> ShakeDesignTokens.PrimaryIndigo
         containerColor != null -> containerColor
-        isDark -> ShakeDesignTokens.NeuSurfaceDark
-        else -> ShakeDesignTokens.NeuSurfaceLight
+        isDark -> Color(0xFF1E293B)
+        else -> Color.White
     }
 
     val textColor = when {
         isPrimary -> Color.White
         contentColor != null -> contentColor
-        isDark -> ShakeDesignTokens.TextPrimaryDark
-        else -> ShakeDesignTokens.TextPrimaryLight
+        isDark -> Color(0xFFF8FAFC)
+        else -> Color(0xFF0F172A)
     }
 
     val border = if (isPrimary) {
@@ -52,7 +53,7 @@ fun NeuButton(
     } else {
         BorderStroke(
             1.dp,
-            if (isDark) ShakeDesignTokens.GlassBorderDark else ShakeDesignTokens.GlassBorderLight
+            if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0)
         )
     }
 
@@ -61,13 +62,13 @@ fun NeuButton(
         color = bgColor,
         contentColor = textColor,
         border = border,
-        shadowElevation = if (isPrimary) 4.dp else 2.dp,
+        shadowElevation = if (isPrimary) 3.dp else 1.5.dp,
         modifier = modifier
             .clip(shape)
             .clickable { onClick() }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(contentPadding),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
             content = content
@@ -86,18 +87,18 @@ fun NeuIconButton(
     tint: Color? = null,
     size: Dp = 42.dp
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = isAppDarkTheme()
     val bgColor = when {
         isSelected -> ShakeDesignTokens.PrimaryIndigo
-        isDark -> ShakeDesignTokens.NeuSurfaceDark
-        else -> ShakeDesignTokens.NeuSurfaceLight
+        isDark -> Color(0xFF1E293B)
+        else -> Color.White
     }
 
     val iconColor = when {
         isSelected -> Color.White
         tint != null -> tint
-        isDark -> ShakeDesignTokens.TextPrimaryDark
-        else -> ShakeDesignTokens.TextPrimaryLight
+        isDark -> Color(0xFFF8FAFC)
+        else -> Color(0xFF0F172A)
     }
 
     Surface(
@@ -105,7 +106,7 @@ fun NeuIconButton(
         color = bgColor,
         border = BorderStroke(
             1.dp,
-            if (isSelected) Color.White.copy(alpha = 0.2f) else if (isDark) ShakeDesignTokens.GlassBorderDark else ShakeDesignTokens.GlassBorderLight
+            if (isSelected) Color.White.copy(alpha = 0.2f) else if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0)
         ),
         shadowElevation = if (isSelected) 3.dp else 1.5.dp,
         modifier = modifier
@@ -131,7 +132,7 @@ fun NeuSegmentedControl(
     onSelectIndex: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = isAppDarkTheme()
     val containerBg = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
 
     Surface(
@@ -146,7 +147,7 @@ fun NeuSegmentedControl(
             items.forEachIndexed { index, title ->
                 val isSelected = index == selectedIndex
                 val itemBg = when {
-                    isSelected && isDark -> ShakeDesignTokens.NeuSurfaceDark
+                    isSelected && isDark -> Color(0xFF334155)
                     isSelected && !isDark -> Color.White
                     else -> Color.Transparent
                 }
@@ -155,7 +156,7 @@ fun NeuSegmentedControl(
                     shape = RoundedCornerShape(12.dp),
                     color = itemBg,
                     shadowElevation = if (isSelected) 2.dp else 0.dp,
-                    border = if (isSelected) BorderStroke(1.dp, if (isDark) ShakeDesignTokens.GlassBorderDark else ShakeDesignTokens.GlassBorderLight) else null,
+                    border = if (isSelected) BorderStroke(1.dp, if (isDark) Color(0xFF475569) else Color(0xFFCBD5E1)) else null,
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(12.dp))
@@ -186,17 +187,17 @@ fun NeuKeypadButton(
     modifier: Modifier = Modifier,
     isAccent: Boolean = false
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = isAppDarkTheme()
     val bgColor = when {
         isAccent -> ShakeDesignTokens.PrimaryIndigo
-        isDark -> ShakeDesignTokens.NeuSurfaceDark
+        isDark -> Color(0xFF1E293B)
         else -> Color.White
     }
 
     val textColor = when {
         isAccent -> Color.White
-        isDark -> ShakeDesignTokens.TextPrimaryDark
-        else -> ShakeDesignTokens.TextPrimaryLight
+        isDark -> Color(0xFFF8FAFC)
+        else -> Color(0xFF0F172A)
     }
 
     Surface(
@@ -204,7 +205,7 @@ fun NeuKeypadButton(
         color = bgColor,
         border = BorderStroke(
             1.dp,
-            if (isAccent) Color.White.copy(alpha = 0.3f) else if (isDark) ShakeDesignTokens.GlassBorderDark else ShakeDesignTokens.GlassBorderLight
+            if (isAccent) Color.White.copy(alpha = 0.3f) else if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0)
         ),
         shadowElevation = 2.dp,
         modifier = modifier
@@ -245,27 +246,43 @@ fun NeuPill(
     color: Color = ShakeDesignTokens.PrimaryIndigo,
     icon: ImageVector? = null
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = isAppDarkTheme()
     val bgColor = when {
-        isSelected -> color.copy(alpha = 0.15f)
-        isDark -> ShakeDesignTokens.NeuSurfaceDark
-        else -> ShakeDesignTokens.NeuSurfaceLight
+        isSelected -> color
+        isDark -> Color(0xFF1E293B)
+        else -> Color.White
+    }
+
+    val contentColor = when {
+        isSelected -> Color.White
+        isDark -> Color(0xFFF1F5F9)
+        else -> Color(0xFF1E293B)
+    }
+
+    val iconColor = when {
+        isSelected -> Color.White
+        isDark -> Color(0xFF94A3B8)
+        else -> Color(0xFF64748B)
+    }
+
+    val borderStroke = when {
+        isSelected -> BorderStroke(1.dp, color)
+        isDark -> BorderStroke(1.dp, Color(0xFF334155))
+        else -> BorderStroke(1.dp, Color(0xFFE2E8F0))
     }
 
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = bgColor,
-        border = BorderStroke(
-            1.dp,
-            if (isSelected) color else if (isDark) ShakeDesignTokens.GlassBorderDark else ShakeDesignTokens.GlassBorderLight
-        ),
-        shadowElevation = if (isSelected) 1.5.dp else 0.5.dp,
+        contentColor = contentColor,
+        border = borderStroke,
+        shadowElevation = if (isSelected) 2.5.dp else 1.dp,
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
@@ -273,23 +290,66 @@ fun NeuPill(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isSelected) color else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(14.dp)
+                    tint = iconColor,
+                    modifier = Modifier.size(15.dp)
                 )
             } else {
                 Box(
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(color)
+                        .background(if (isSelected) Color.White else color)
                 )
             }
             Text(
                 text = label,
                 fontSize = 12.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) color else MaterialTheme.colorScheme.onSurface
+                color = contentColor
             )
         }
     }
 }
+
+@Composable
+fun NeuNotificationBadge(
+    count: Int,
+    modifier: Modifier = Modifier
+) {
+    if (count <= 0) return
+    Box(
+        modifier = modifier
+            .size(18.dp)
+            .clip(CircleShape)
+            .background(ShakeDesignTokens.ExceededRed),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = if (count > 99) "99+" else count.toString(),
+            color = Color.White,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+fun NeuSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        colors = SwitchDefaults.colors(
+            checkedThumbColor = Color.White,
+            checkedTrackColor = ShakeDesignTokens.PrimaryIndigo,
+            uncheckedThumbColor = Color.White,
+            uncheckedTrackColor = Color(0xFFCBD5E1),
+            uncheckedBorderColor = Color.Transparent
+        )
+    )
+}
+

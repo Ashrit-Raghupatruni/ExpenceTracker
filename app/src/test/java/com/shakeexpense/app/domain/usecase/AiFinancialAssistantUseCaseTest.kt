@@ -77,4 +77,84 @@ class AiFinancialAssistantUseCaseTest {
         assertFalse(response.isGated)
         assertTrue(response.answer.contains("Caution") || response.answer.contains("exceeds"))
     }
+
+    @Test
+    fun `test 50-30-20 rule calculates needs wants and savings correctly`() {
+        val now = System.currentTimeMillis()
+        val records = listOf(
+            ExpenseRecordItem(
+                expenseId = 1L,
+                expenseUuid = "exp_1",
+                userId = "user_1",
+                amountCents = 2000000L, // ₹20,000 Groceries (Needs)
+                transactionType = "DEBIT",
+                transactionSource = "MANUAL",
+                timestamp = now,
+                categoryName = "Groceries"
+            ),
+            ExpenseRecordItem(
+                expenseId = 2L,
+                expenseUuid = "exp_2",
+                userId = "user_1",
+                amountCents = 1000000L, // ₹10,000 Shopping (Wants)
+                transactionType = "DEBIT",
+                transactionSource = "MANUAL",
+                timestamp = now,
+                categoryName = "Shopping"
+            )
+        )
+
+        val response = assistant.ask(
+            question = "How does my spending compare to 50 30 20 rule?",
+            plan = SubscriptionPlan.PLUS,
+            records = records,
+            monthlyIncomeCents = 6000000L // ₹60,000
+        )
+
+        assertFalse(response.isGated)
+        assertTrue(response.answer.contains("50/30/20"))
+        assertTrue(response.answer.contains("Needs"))
+        assertTrue(response.answer.contains("Wants"))
+    }
+
+    @Test
+    fun `test subscription queries summarize recurring commitments`() {
+        val now = System.currentTimeMillis()
+        val records = listOf(
+            ExpenseRecordItem(
+                expenseId = 1L,
+                expenseUuid = "sub_1",
+                userId = "user_1",
+                amountCents = 64900L, // ₹649 Netflix
+                transactionType = "DEBIT",
+                transactionSource = "BANK_NOTIFICATION",
+                timestamp = now,
+                categoryName = "Entertainment",
+                customName = "Netflix"
+            )
+        )
+
+        val response = assistant.ask(
+            question = "How much do I spend on subscriptions?",
+            plan = SubscriptionPlan.PLUS,
+            records = records
+        )
+
+        assertFalse(response.isGated)
+        assertTrue(response.answer.contains("Netflix") || response.answer.contains("649"))
+    }
+
+    @Test
+    fun `test emergency fund query returns actionable guideline`() {
+        val response = assistant.ask(
+            question = "How much emergency fund do I need?",
+            plan = SubscriptionPlan.PLUS,
+            records = emptyList(),
+            monthlyIncomeCents = 5000000L // ₹50,000
+        )
+
+        assertFalse(response.isGated)
+        assertTrue(response.answer.contains("Emergency Fund") || response.answer.contains("months"))
+    }
 }
+

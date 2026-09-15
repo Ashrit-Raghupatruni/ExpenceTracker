@@ -152,14 +152,14 @@ class SpendingAlertNotificationManager(
             100 -> {
                 val excess = (spentCents - limitCents).coerceAtLeast(0L) / 100
                 Pair(
-                    "🚨 Monthly Spending Limit Exceeded",
+                    "Monthly Spending Limit Exceeded",
                     if (excess > 0) "Your monthly spending limit of ₹$limitRupees has been exceeded by ₹$excess (Total: ₹$spentRupees)."
                     else "Your monthly spending limit of ₹$limitRupees has been reached."
                 )
             }
-            90 -> Pair("🚨 90% Spending Limit Reached", "You've used 90% of your monthly spending limit (₹$spentRupees / ₹$limitRupees).")
-            80 -> Pair("⚠️ 80% Spending Limit Reached", "You've used 80% of your monthly spending limit (₹$spentRupees / ₹$limitRupees).")
-            70 -> Pair("⚠️ 70% Spending Limit Reached", "You've used 70% of your monthly spending limit (₹$spentRupees / ₹$limitRupees).")
+            90 -> Pair("90% Spending Limit Reached", "You've used 90% of your monthly spending limit (₹$spentRupees / ₹$limitRupees).")
+            80 -> Pair("80% Spending Limit Reached", "You've used 80% of your monthly spending limit (₹$spentRupees / ₹$limitRupees).")
+            70 -> Pair("70% Spending Limit Reached", "You've used 70% of your monthly spending limit (₹$spentRupees / ₹$limitRupees).")
             else -> return
         }
 
@@ -237,14 +237,14 @@ class SpendingAlertNotificationManager(
             100 -> {
                 val excess = (spentCents - limitCents).coerceAtLeast(0L) / 100
                 Pair(
-                    "🚨 Family Monthly Limit Exceeded",
+                    "Family Monthly Limit Exceeded",
                     if (excess > 0) "$familyName limit of ₹$limitRupees exceeded by ₹$excess (Total: ₹$spentRupees)."
                     else "$familyName monthly spending limit of ₹$limitRupees has been reached."
                 )
             }
-            90 -> Pair("🚨 Family 90% Spending Alert", "$familyName has reached 90% of the monthly limit (₹$spentRupees / ₹$limitRupees).")
-            80 -> Pair("⚠️ Family 80% Spending Alert", "$familyName has reached 80% of the monthly limit (₹$spentRupees / ₹$limitRupees).")
-            70 -> Pair("⚠️ Family 70% Spending Alert", "$familyName has reached 70% of the monthly limit (₹$spentRupees / ₹$limitRupees).")
+            90 -> Pair("Family 90% Spending Alert", "$familyName has reached 90% of the monthly limit (₹$spentRupees / ₹$limitRupees).")
+            80 -> Pair("Family 80% Spending Alert", "$familyName has reached 80% of the monthly limit (₹$spentRupees / ₹$limitRupees).")
+            70 -> Pair("Family 70% Spending Alert", "$familyName has reached 70% of the monthly limit (₹$spentRupees / ₹$limitRupees).")
             else -> return
         }
 
@@ -295,7 +295,7 @@ class SpendingAlertNotificationManager(
             sentSet.add(thresholdToTrigger)
             val spentRupees = spentCents / 100
             val limitRupees = limitCents / 100
-            val title = if (thresholdToTrigger >= 100) "🚨 Family Budget Exceeded: $categoryName" else "⚠️ Family Budget Alert: $categoryName (80%)"
+            val title = if (thresholdToTrigger >= 100) "Family Budget Exceeded: $categoryName" else "Family Budget Alert: $categoryName (80%)"
             val body = "$familyName $categoryName budget reached ₹$spentRupees / ₹$limitRupees."
 
             val intent = Intent(context, MainActivity::class.java).apply {

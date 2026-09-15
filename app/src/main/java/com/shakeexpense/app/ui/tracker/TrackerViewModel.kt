@@ -117,6 +117,8 @@ class TrackerViewModel(
                 _state.update {
                     it.copy(
                         safeToSpend = safeSummary,
+                        financialProfile = profile,
+                        recurringPayments = recurring,
                         nextMonthPrediction = prediction,
                         spendingLimitState = limitState,
                         activePlan = plan,
@@ -125,6 +127,26 @@ class TrackerViewModel(
                 }
             }.collect { }
         }
+    }
+
+    fun onOpenSubScreen(subScreen: TrackerSubScreen) {
+        _state.update { it.copy(activeSubScreen = subScreen) }
+    }
+
+    fun onCloseSubScreen() {
+        _state.update { it.copy(activeSubScreen = TrackerSubScreen.NONE) }
+    }
+
+    fun onMarkAllNotificationsRead(ids: List<String>) {
+        _state.update { it.copy(readNotificationIds = it.readNotificationIds + ids) }
+    }
+
+    fun onMarkNotificationRead(id: String) {
+        _state.update { it.copy(readNotificationIds = it.readNotificationIds + id) }
+    }
+
+    fun onDismissNotification(id: String) {
+        _state.update { it.copy(dismissedNotificationIds = it.dismissedNotificationIds + id) }
     }
 
     fun onOpenSpendingLimitEditDialog() {

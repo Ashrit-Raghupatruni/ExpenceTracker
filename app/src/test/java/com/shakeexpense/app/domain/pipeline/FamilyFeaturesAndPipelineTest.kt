@@ -328,8 +328,8 @@ class FamilyFeaturesAndPipelineTest {
         )
 
         assertNotNull(result)
-        assertEquals("🟢 Healthy", result?.spendingSubScore)
-        assertEquals("🟢 Healthy", result?.budgetSubScore)
-        assertEquals("🟢 None", result?.riskSignalsSubScore)
+        assertEquals("Healthy", result?.spendingSubScore)
+        assertEquals("Healthy", result?.budgetSubScore)
+        assertEquals("None", result?.riskSignalsSubScore)
     }
 }

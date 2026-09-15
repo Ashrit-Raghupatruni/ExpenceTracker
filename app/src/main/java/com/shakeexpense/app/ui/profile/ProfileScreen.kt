@@ -35,9 +35,12 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
@@ -57,6 +60,7 @@ import androidx.compose.material.icons.filled.SyncProblem
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.text.KeyboardOptions
@@ -837,63 +841,109 @@ fun ProfileScreen(
             }
         }
 
-        // 5. Monthly History Section Header
+        // 5. Monthly History Card (Enclosed Box with Dropdown Accordion)
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Monthly History",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-                Text(
-                    text = "${state.monthlyHistory.size} months",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+            var isMonthlyHistoryExpanded by rememberSaveable { mutableStateOf(false) }
 
-        // 5. Monthly History Cards
-        if (state.monthlyHistory.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = "No recorded expense history found.",
+                    // Header Row (Clickable to collapse/expand monthly history box)
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(24.dp),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                            .clickable { isMonthlyHistoryExpanded = !isMonthlyHistoryExpanded },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Monthly History",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (state.monthlyHistory.isNotEmpty()) {
+                                        if (isMonthlyHistoryExpanded) "${state.monthlyHistory.size} months recorded" else "Tap to view ${state.monthlyHistory.size} months of history"
+                                    } else {
+                                        "No recorded expense history found"
+                                    },
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { isMonthlyHistoryExpanded = !isMonthlyHistoryExpanded },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isMonthlyHistoryExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = if (isMonthlyHistoryExpanded) "Hide Monthly History" else "Show Monthly History",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    // Expandable Monthly History Content
+                    AnimatedVisibility(
+                        visible = isMonthlyHistoryExpanded,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                            if (state.monthlyHistory.isEmpty()) {
+                                Text(
+                                    text = "No recorded expense history found.",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 12.sp
+                                )
+                            } else {
+                                state.monthlyHistory.forEach { monthSummary ->
+                                    MonthlyHistoryCard(
+                                        summary = monthSummary,
+                                        isExpanded = state.expandedMonthKey == monthSummary.yearMonth,
+                                        onToggleExpand = { viewModel.toggleExpandMonth(monthSummary.yearMonth) }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-        } else {
-            items(state.monthlyHistory, key = { it.yearMonth }) { monthSummary ->
-                MonthlyHistoryCard(
-                    summary = monthSummary,
-                    isExpanded = state.expandedMonthKey == monthSummary.yearMonth,
-                    onToggleExpand = { viewModel.toggleExpandMonth(monthSummary.yearMonth) }
-                )
             }
         }
 
@@ -970,92 +1020,92 @@ fun ProfileScreen(
                             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
                     GuideAccordionItem(
-                        title = "💡 1. What is ShakeExpense?",
+                        title = "1. What is ShakeExpense?",
                         content = "ShakeExpense is an ultra-fast daily expense tracker with an instant shake-to-open translucent overlay HUD, spreadsheet organization, smart on-device bank notification detection, and real-time family expense synchronization."
                     )
 
                     GuideAccordionItem(
-                        title = "➕ 2. How to Add Expenses",
+                        title = "2. How to Add Expenses",
                         content = "You can add expenses in two ways:\n• Shake Gesture: Shake your phone from anywhere to bring up the Quick Entry keypad.\n• Manual Add: Tap the '+' floating button on the Tracker tab to select a category and amount."
                     )
 
                     GuideAccordionItem(
-                        title = "📳 3. How to Shake to Open Expense Entry",
+                        title = "3. How to Shake to Open Expense Entry",
                         content = "Gently shake your phone twice. ShakeExpense detects the physical gesture and immediately displays the translucent Quick Entry overlay above your current app or Android Home Screen."
                     )
 
                     GuideAccordionItem(
-                        title = "🏷️ 4. Categories & Custom Tags",
+                        title = "4. Categories & Custom Tags",
                         content = "Choose from 7 standard categories (Food, Transport, Groceries, Bills, Shopping, Entertainment, Others). Selecting 'Others' lets you enter custom category names for personalized tracking."
                     )
 
                     GuideAccordionItem(
-                        title = "🏦 5. Bank Notification Detection",
+                        title = "5. Bank Notification Detection",
                         content = "When enabled, ShakeExpense automatically detects transaction SMS and notifications from supported banks and payment apps (UPI, GPay, Paytm, PhonePe, HDFC, SBI, ICICI, etc.). A prompt lets you confirm and categorize the expense in 1 tap."
                     )
 
                     GuideAccordionItem(
-                        title = "👨‍👩‍👧‍👦 6. Family & Parental Sync",
+                        title = "6. Family & Parental Sync",
                         content = "Parents can create a Family Group to generate an official 6-character Invite Code and QR Code. Family members join using the code, synchronizing child spending and category totals in real-time."
                     )
 
                     GuideAccordionItem(
-                        title = "🔄 7. Offline / Online Synchronization",
+                        title = "7. Offline / Online Synchronization",
                         content = "ShakeExpense is 100% offline-first. All transactions save instantly to your local Room database. When internet connection is restored, pending entries sync automatically to the cloud."
                     )
 
                     GuideAccordionItem(
-                        title = "👤 8. Google Account & Data Persistence",
+                        title = "8. Google Account & Data Persistence",
                         content = "All personal expenses are permanently linked to your authenticated Google User ID (Firebase UID). Logging out or switching devices safely preserves your transaction history, which restores automatically upon signing back in."
                     )
 
                     GuideAccordionItem(
-                        title = "🛡️ 9. Required Permissions & Setup",
+                        title = "9. Required Permissions & Setup",
                         content = "• Shake Anywhere: Requires 'Display over other apps' (Overlay) to show the Quick Entry HUD from the Home Screen.\n• Bank Notification Detection: Requires 'Notification Access' to recognize bank transaction alerts on-device."
                     )
 
                     GuideAccordionItem(
-                        title = "🛠️ 10. Troubleshooting & FAQ",
+                        title = "10. Troubleshooting & FAQ",
                         content = "• Shake not triggering? Ensure 'Shake Anywhere' overlay permission is granted and battery optimization is disabled for ShakeExpense (especially on OnePlus, Xiaomi, and Samsung devices).\n• Cloud sync pending? Check your internet connection; WorkManager will automatically retry in the background."
                     )
 
                     GuideAccordionItem(
-                        title = "💎 11. Subscription Plans & Tiers",
-                        content = "• FREE (₹0): Shake HUD, manual logging, on-device bank detection, basic spreadsheet, and 6-month history.\n• PLUS (₹59/mo or ₹699/yr): Safe-to-Spend, Financial Safety Score, AI Assistant, Prediction, 70-100% Alerts, CSV Export, and Recurring Detector.\n• FAMILY PRO (₹99/mo or ₹999/yr): All PLUS features for up to 5 family members + Shared Family Budgets, Granular Privacy, Family Limits, and Child Exit Governance.\n• Upgrade by selecting your tier and paying via UPI or Google Play."
+                        title = "11. Subscription Plans & Tiers",
+                        content = "• FREE (₹0): Shake HUD, manual logging, on-device bank detection, basic spreadsheet, and 6-month history.\n• PLUS (₹59/mo or ₹699/yr): Safe-to-Spend, Financial Safety Score, AI Assistant, Prediction, 70-100% Alerts, CSV Export, and Recurring Detector.\n• FAMILY PRO (₹99/mo or ₹999/yr): All PLUS features for up to 5 family members + Shared Family Budgets, Granular Privacy, Family Limits, and Child Exit Governance.\n• Upgrade by selecting your tier and paying via UPI or Direct Payment."
                     )
 
                     GuideAccordionItem(
-                        title = "🛡️ 12. Safe-to-Spend Daily Runway",
+                        title = "12. Safe-to-Spend Daily Runway",
                         content = "Configure your monthly income and savings target in Tracker -> Safe-to-Spend Setup. The calculator factors in your upcoming recurring bills and shows you exactly how much money is safe to spend today without overrunning your monthly plan. If income is not configured, it safely displays ₹0."
                     )
 
                     GuideAccordionItem(
-                        title = "📊 13. Dynamic Financial Safety Score",
+                        title = "13. Dynamic Financial Safety Score",
                         content = "A real-time 0–100 score analyzing 4 authentic factors:\n• Spending: Discretionary purchases vs essential needs.\n• Budget: Monthly debit total vs planned budget.\n• Recurring: Fixed recurring obligations ratio.\n• Risk Signals: Over-budget warnings and sudden spending spikes.\nZero fake data: If no records exist, the score displays a clean empty state."
                     )
 
                     GuideAccordionItem(
-                        title = "🤖 14. AI Financial Assistant & Predictions",
+                        title = "14. AI Financial Assistant & Predictions",
                         content = "PLUS and FAMILY PRO members can tap the AI Assistant on Tracker to ask natural language questions like 'Can I afford 2000 this weekend?' or 'How much did I spend on Food?'. Next-month predictions use statistical moving averages and regression based on your authentic spending habits."
                     )
 
                     GuideAccordionItem(
-                        title = "👨‍👩‍👧‍👦 15. Shared Family Budgets (Family Pro)",
+                        title = "15. Shared Family Budgets (Family Pro)",
                         content = "Set collective household limits by category in the Family tab. Tap '+ Add Budget', pick a category (like Food or Groceries), and set a family-wide monthly cap. All members' transactions in that category aggregate in real-time with an interactive progress bar."
                     )
 
                     GuideAccordionItem(
-                        title = "🚪 16. Child Exit Governance & Approval",
+                        title = "16. Child Exit Governance & Approval",
                         content = "Child members cannot detach from a family unilaterally. When a child taps 'Request Exit', an amber 'Exit Requested' badge is shown on their card. Parents receive the request and can choose to either approve detachment or dismiss the request."
                     )
 
                     GuideAccordionItem(
-                        title = "🔒 17. Granular Family Privacy Controls",
+                        title = "17. Granular Family Privacy Controls",
                         content = "In Family Hub, tap the Shield icon next to any member to customize their privacy:\n• Share Transactions: Hide individual line items while sharing monthly totals.\n• Share Monthly Total: Hide monthly spending aggregate.\n• Share Category Totals: Hide category distributions.\n• Receive Alerts: Toggle family budget push notifications."
                     )
 
                     GuideAccordionItem(
-                        title = "🔔 18. Spending Limit Alerts & Anti-Spam",
+                        title = "18. Spending Limit Alerts & Anti-Spam",
                         content = "Get notified at 70%, 80%, 90%, and 100% of your personal or family spending limit. The smart anti-spam engine guarantees you only receive one alert per threshold each calendar month, preventing notification floods."
                     )
                         }
@@ -1588,10 +1638,10 @@ private fun formatResetCurrency(cents: Long): String {
 fun FinancialSafetyCard(
     score: Int?,
     primaryOpportunity: String?,
-    spendingSubScore: String = "🟢 Healthy",
-    budgetSubScore: String = "🟢 Healthy",
-    recurringSubScore: String = "🟢 Healthy",
-    riskSignalsSubScore: String = "🟢 None"
+    spendingSubScore: String = "Healthy",
+    budgetSubScore: String = "Healthy",
+    recurringSubScore: String = "Healthy",
+    riskSignalsSubScore: String = "None"
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1611,7 +1661,12 @@ fun FinancialSafetyCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "🛡️", fontSize = 20.sp)
+                    Icon(
+                        imageVector = Icons.Default.Security,
+                        contentDescription = null,
+                        tint = Color(0xFF38BDF8),
+                        modifier = Modifier.size(22.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
@@ -1670,7 +1725,12 @@ fun FinancialSafetyCard(
                             modifier = Modifier.padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "💡", fontSize = 14.sp)
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color(0xFFFBBF24),
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = primaryOpportunity,
@@ -1751,7 +1811,12 @@ fun SubscriptionsSummaryCard(
                         .weight(1f)
                         .clickable { expanded = !expanded }
                 ) {
-                    Text(text = "🔄", fontSize = 18.sp)
+                    Icon(
+                        imageVector = Icons.Default.Autorenew,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
@@ -1834,7 +1899,12 @@ fun SubscriptionsSummaryCard(
                         modifier = Modifier.padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "⚠️", fontSize = 14.sp)
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color(0xFFD97706),
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = unusedWarnings.first(),
@@ -1848,75 +1918,174 @@ fun SubscriptionsSummaryCard(
 
             // Expanded list
             if (expanded && subscriptions.isNotEmpty()) {
+                val monthlySubs = subscriptions.filter { !it.cadence.equals("YEARLY", ignoreCase = true) }
+                val yearlySubs = subscriptions.filter { it.cadence.equals("YEARLY", ignoreCase = true) }
+                val dueDateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                subscriptions.forEach { sub ->
-                    val categoryInfo = RECURRING_CATEGORIES.find { it.id == sub.categoryId } ?: RECURRING_CATEGORIES.first { it.id == 4L }
-                    val isYearly = sub.cadence.equals("YEARLY", ignoreCase = true)
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onEditSubscription(sub) }
-                    ) {
-                        Row(
+
+                // 1. Monthly Subscriptions Section
+                if (monthlySubs.isNotEmpty()) {
+                    Text(
+                        text = "Monthly Subscriptions (${monthlySubs.size})",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+
+                    monthlySubs.forEach { sub ->
+                        val categoryInfo = RECURRING_CATEGORIES.find { it.id == sub.categoryId } ?: RECURRING_CATEGORIES.first { it.id == 4L }
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .clickable { onEditSubscription(sub) }
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = sub.name,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = categoryInfo.color.copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                text = categoryInfo.name,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = categoryInfo.color,
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = sub.name,
+                                        text = "Next: ${dueDateFormatter.format(Date(sub.nextDueTimestamp))}",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "₹${sub.amountCents / 100}/mo",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        fontFamily = FontFamily.Monospace,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = categoryInfo.color.copy(alpha = 0.15f)
+                                    IconButton(
+                                        onClick = { onEditSubscription(sub) },
+                                        modifier = Modifier.size(28.dp)
                                     ) {
-                                        Text(
-                                            text = categoryInfo.name,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = categoryInfo.color,
-                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
                                         )
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = if (isYearly) "Yearly (₹${sub.amountCents / 100}/yr)" else "Monthly (₹${sub.amountCents / 100}/mo)",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
+                        }
+                    }
+                }
 
+                // 2. Yearly Subscriptions Section
+                if (yearlySubs.isNotEmpty()) {
+                    Text(
+                        text = "Yearly Subscriptions (${yearlySubs.size})",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF6366F1),
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+
+                    yearlySubs.forEach { sub ->
+                        val categoryInfo = RECURRING_CATEGORIES.find { it.id == sub.categoryId } ?: RECURRING_CATEGORIES.first { it.id == 4L }
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onEditSubscription(sub) }
+                        ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = if (isYearly) "₹${sub.amountCents / 100}/yr" else "₹${sub.amountCents / 100}/mo",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                IconButton(
-                                    onClick = { onEditSubscription(sub) },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = "Edit",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = sub.name,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFF6366F1).copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                text = "Yearly",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color(0xFF6366F1),
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Next Renewal: ${dueDateFormatter.format(Date(sub.nextDueTimestamp))}",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "₹${sub.amountCents / 100}/yr",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = Color(0xFF6366F1)
+                                    )
+                                    IconButton(
+                                        onClick = { onEditSubscription(sub) },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2254,7 +2423,12 @@ fun SubscriptionTierCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "👑", fontSize = 18.sp)
+                    Icon(
+                        imageVector = Icons.Default.WorkspacePremium,
+                        contentDescription = null,
+                        tint = if (currentPlan == com.shakeexpense.app.domain.model.SubscriptionPlan.FREE) MaterialTheme.colorScheme.primary else Color(0xFFFBBF24),
+                        modifier = Modifier.size(22.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
@@ -2429,7 +2603,12 @@ fun MembershipPaymentDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "💳", fontSize = 20.sp)
+                Icon(
+                    imageVector = Icons.Default.CreditCard,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(text = "Payment Gateway Checkout", fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -2549,13 +2728,7 @@ fun MembershipPaymentDialog(
                             val intent = Intent(Intent.ACTION_VIEW, upiUri)
                             context.startActivity(Intent.createChooser(intent, "Pay ₹$amountInRupees with UPI"))
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Redirecting to Google Play Subscriptions...", Toast.LENGTH_SHORT).show()
-                            try {
-                                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/account/subscriptions"))
-                                context.startActivity(webIntent)
-                            } catch (_: Exception) {
-                                Toast.makeText(context, "Please configure a UPI app or Play Store to complete payment", Toast.LENGTH_SHORT).show()
-                            }
+                            Toast.makeText(context, "No UPI app found. Please install a UPI payment app (GPay, PhonePe, Paytm) to complete payment.", Toast.LENGTH_LONG).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -2651,8 +2824,13 @@ private fun PlanOptionCard(
             HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
 
             features.forEach { feature ->
-                Row(verticalAlignment = Alignment.Top) {
-                    Text(text = "✓", fontSize = 11.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(13.dp)
+                    )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(text = feature, fontSize = 11.sp, lineHeight = 15.sp, color = MaterialTheme.colorScheme.onSurface)
                 }

@@ -59,7 +59,7 @@ class SpendingLimitNotificationEngine(
                     val overAmount = (currentMonthExpensesCents - activeMonthlyLimitCents) / 100L
                     sendNotification(
                         id = NOTIFICATION_ID_INDIVIDUAL,
-                        title = "⚠️ Monthly Spending Limit Exceeded",
+                        title = "Monthly Spending Limit Exceeded",
                         message = "Your monthly spending limit has been exceeded by $currencySymbol$overAmount."
                     )
                     prefs.edit().putBoolean("notified_100_$yearMonthKey", true).apply()
@@ -69,7 +69,7 @@ class SpendingLimitNotificationEngine(
                 if (!prefs.getBoolean("notified_90_$yearMonthKey", false)) {
                     sendNotification(
                         id = NOTIFICATION_ID_INDIVIDUAL,
-                        title = "⚠️ 90% Spending Limit Reached",
+                        title = "90% Spending Limit Reached",
                         message = "You've used 90% of your monthly spending limit ($currencySymbol$spentRupees of $currencySymbol$limitRupees)."
                     )
                     prefs.edit().putBoolean("notified_90_$yearMonthKey", true).apply()
@@ -79,7 +79,7 @@ class SpendingLimitNotificationEngine(
                 if (!prefs.getBoolean("notified_80_$yearMonthKey", false)) {
                     sendNotification(
                         id = NOTIFICATION_ID_INDIVIDUAL,
-                        title = "⚠️ 80% Spending Limit Reached",
+                        title = "80% Spending Limit Reached",
                         message = "You've used 80% of your monthly spending limit."
                     )
                     prefs.edit().putBoolean("notified_80_$yearMonthKey", true).apply()
@@ -89,7 +89,7 @@ class SpendingLimitNotificationEngine(
                 if (!prefs.getBoolean("notified_70_$yearMonthKey", false)) {
                     sendNotification(
                         id = NOTIFICATION_ID_INDIVIDUAL,
-                        title = "ℹ️ 70% Spending Limit Reached",
+                        title = "70% Spending Limit Reached",
                         message = "You've used 70% of your monthly spending limit."
                     )
                     prefs.edit().putBoolean("notified_70_$yearMonthKey", true).apply()
@@ -113,7 +113,7 @@ class SpendingLimitNotificationEngine(
 
             sendNotification(
                 id = NOTIFICATION_ID_FAMILY,
-                title = "⚠️ Family Monthly Spending Limit Exceeded",
+                title = "Family Monthly Spending Limit Exceeded",
                 message = "Family spending: $currencySymbol$familySpentRupees | Monthly limit: $currencySymbol$familyLimitRupees | Over limit: $currencySymbol$overRupees"
             )
             prefs.edit().putBoolean("notified_family_100_$yearMonthKey", true).apply()

@@ -1135,27 +1135,27 @@ fun FamilyThresholdAlertBanner(state: FamilyState) {
                 Color(0xFFFEF2F2),
                 Color(0xFF991B1B),
                 Color(0xFFDC2626),
-                if (excess > 0) "🚨 Family monthly spending limit exceeded by ₹$excess!"
-                else "🚨 Family monthly spending limit reached!"
+                if (excess > 0) "Family monthly spending limit exceeded by ₹$excess!"
+                else "Family monthly spending limit reached!"
             )
         }
         pct >= 90 -> Quadruple(
             Color(0xFFFFF7ED),
             Color(0xFF9A3412),
             Color(0xFFEA580C),
-            "🚨 Critical: Family has used 90% of the monthly limit (₹${spentCents / 100} / ₹${limitCents / 100})."
+            "Critical: Family has used 90% of the monthly limit (₹${spentCents / 100} / ₹${limitCents / 100})."
         )
         pct >= 80 -> Quadruple(
             Color(0xFFFFFBEB),
             Color(0xFF92400E),
             Color(0xFFD97706),
-            "⚠️ Caution: Family has reached 80% of the monthly limit (₹${spentCents / 100} / ₹${limitCents / 100})."
+            "Caution: Family has reached 80% of the monthly limit (₹${spentCents / 100} / ₹${limitCents / 100})."
         )
         else -> Quadruple(
             Color(0xFFFFFBEB),
             Color(0xFF92400E),
             Color(0xFFD97706),
-            "⚠️ Notice: Family has used 70% of the monthly limit (₹${spentCents / 100} / ₹${limitCents / 100})."
+            "Notice: Family has used 70% of the monthly limit (₹${spentCents / 100} / ₹${limitCents / 100})."
         )
     }
 

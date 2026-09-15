@@ -12,9 +12,9 @@ class ShakeDetector(
 
     companion object {
         const val GRAVITY_EARTH = 9.80665f
-        const val SHAKE_THRESHOLD = 10.5f // m/s^2 above gravity for reliable natural shake
-        const val REVERSAL_TIME_WINDOW_MS = 600L
-        const val DEBOUNCE_TIME_MS = 800L
+        const val SHAKE_THRESHOLD = 11.5f // m/s^2 above gravity for reliable natural shake
+        const val REVERSAL_TIME_WINDOW_MS = 450L
+        const val DEBOUNCE_TIME_MS = 750L
     }
 
     private var lastUpdateTimestamp: Long = 0

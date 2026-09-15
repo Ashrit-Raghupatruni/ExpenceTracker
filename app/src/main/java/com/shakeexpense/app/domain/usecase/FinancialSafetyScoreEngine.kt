@@ -8,10 +8,10 @@ data class SafetyScoreResult(
     val savingsRatePercentage: Int,
     val budgetAdherencePercentage: Int,
     val summary: String,
-    val spendingSubScore: String = "🟢 Healthy",
-    val budgetSubScore: String = "🟢 Healthy",
-    val recurringSubScore: String = "🟢 Healthy",
-    val riskSignalsSubScore: String = "🟢 None"
+    val spendingSubScore: String = "Healthy",
+    val budgetSubScore: String = "Healthy",
+    val recurringSubScore: String = "Healthy",
+    val riskSignalsSubScore: String = "None"
 )
 
 class FinancialSafetyScoreEngine {
@@ -104,17 +104,17 @@ class FinancialSafetyScoreEngine {
 
         // Dynamic Sub-Scores derived authentically from financial records
         val spendingSubScore = when {
-            totalDebitsCents <= 0L -> "🟢 Healthy"
-            discretionaryRatio <= 25 -> "🟢 Healthy"
-            discretionaryRatio <= 45 -> "🟡 Moderate"
-            else -> "🔴 High"
+            totalDebitsCents <= 0L -> "Healthy"
+            discretionaryRatio <= 25 -> "Healthy"
+            discretionaryRatio <= 45 -> "Moderate"
+            else -> "High"
         }
 
         val budgetSubScore = when {
-            effectiveBudget <= 0L -> "🟢 Healthy"
-            budgetUsage <= 70 -> "🟢 Healthy"
-            budgetUsage <= 90 -> "🟡 Review"
-            else -> "🔴 Exceeded"
+            effectiveBudget <= 0L -> "Healthy"
+            budgetUsage <= 70 -> "Healthy"
+            budgetUsage <= 90 -> "Review"
+            else -> "Exceeded"
         }
 
         val recurringDebits = debits.filter {
@@ -124,15 +124,15 @@ class FinancialSafetyScoreEngine {
         val recurringCents = recurringDebits.sumOf { it.amountCents }
         val recurringRatio = if (totalDebitsCents > 0L) ((recurringCents.toDouble() / totalDebitsCents.toDouble()) * 100).toInt() else 0
         val recurringSubScore = when {
-            recurringRatio <= 20 -> "🟢 Healthy"
-            recurringRatio <= 35 -> "🟡 Review"
-            else -> "🔴 Heavy"
+            recurringRatio <= 20 -> "Healthy"
+            recurringRatio <= 35 -> "Review"
+            else -> "Heavy"
         }
 
         val riskSignalsSubScore = when {
-            effectiveBudget > 0L && budgetUsage > 100 -> "🔴 Alert"
-            (effectiveBudget > 0L && budgetUsage > 85) || discretionaryRatio > 50 -> "🟡 Warning"
-            else -> "🟢 None"
+            effectiveBudget > 0L && budgetUsage > 100 -> "Alert"
+            (effectiveBudget > 0L && budgetUsage > 85) || discretionaryRatio > 50 -> "Warning"
+            else -> "None"
         }
 
         return SafetyScoreResult(

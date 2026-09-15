@@ -1,42 +1,17 @@
 package com.shakeexpense.app.ui.overlay
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,15 +20,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shakeexpense.app.domain.model.TransactionSource
 import com.shakeexpense.app.domain.model.TransactionType
+import com.shakeexpense.app.ui.design.*
 import com.shakeexpense.app.ui.entry.ExpenseEntryViewModel
-import com.shakeexpense.app.ui.entry.TransactionTypeChip
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -63,12 +36,13 @@ fun QuickEntryOverlayScreen(
     onSaveSuccess: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+    val isDark = isAppDarkTheme()
 
-    // ~90% Translucent Backdrop (10-15% dimming so wallpaper/home screen is visible)
+    // High-Opacity Dim Backdrop
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.15f))
+            .background(Color.Black.copy(alpha = 0.70f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -76,8 +50,8 @@ fun QuickEntryOverlayScreen(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // High-Contrast Frosted Input Panel
-        Card(
+        // High-Contrast Solid Frosted Input Panel
+        GlassCard(
             modifier = Modifier
                 .fillMaxWidth(0.94f)
                 .padding(vertical = 16.dp)
@@ -86,17 +60,15 @@ fun QuickEntryOverlayScreen(
                     indication = null,
                     onClick = {} // Intercept clicks inside card
                 ),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+            shape = RoundedCornerShape(24.dp),
+            backgroundColor = if (isDark) Color(0xFF1E293B) else Color(0xFFFFFFFF),
+            borderColor = if (isDark) Color(0xFF475569) else Color(0xFFCBD5E1),
+            elevation = 10.dp
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // Header with HUD Title & Close Action
                 Row(
@@ -104,118 +76,82 @@ fun QuickEntryOverlayScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "⚡ QUICK EXPENSE",
-                        fontWeight = FontWeight.Black,
-                        fontSize = 14.sp,
-                        letterSpacing = 1.sp,
-                        color = Color(0xFF2563EB)
-                    )
-
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.height(28.dp).width(28.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close overlay",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "QUICK EXPENSE",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            letterSpacing = 0.8.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                    NeuIconButton(
+                        icon = Icons.Default.Close,
+                        contentDescription = "Close overlay",
+                        onClick = onDismiss,
+                        size = 32.dp
+                    )
+                }
 
                 // Transaction Type Selector (DEBIT / CREDIT)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    TransactionTypeChip(
-                        label = "DEBIT",
-                        isSelected = state.transactionType == TransactionType.DEBIT,
-                        selectedColor = Color(0xFFE11D48),
-                        onClick = { viewModel.onTransactionTypeChanged(TransactionType.DEBIT) }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TransactionTypeChip(
-                        label = "CREDIT",
-                        isSelected = state.transactionType == TransactionType.CREDIT,
-                        selectedColor = Color(0xFF059669),
-                        onClick = { viewModel.onTransactionTypeChanged(TransactionType.CREDIT) }
-                    )
-                }
+                NeuSegmentedControl(
+                    items = listOf("DEBIT", "CREDIT"),
+                    selectedIndex = if (state.transactionType == TransactionType.DEBIT) 0 else 1,
+                    onSelectIndex = { index ->
+                        viewModel.onTransactionTypeChanged(if (index == 0) TransactionType.DEBIT else TransactionType.CREDIT)
+                    }
+                )
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Category Chips
+                // Category Chips (Neutral with single primary accent selection)
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     state.categories.forEach { category ->
                         val isSelected = state.selectedCategory?.id == category.id
-                        val color = parseHexColor(category.colorHex)
-
-                        FilterChip(
-                            selected = isSelected,
+                        NeuPill(
+                            label = category.name,
+                            isSelected = isSelected,
                             onClick = { viewModel.onCategorySelected(category) },
-                            label = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(end = 6.dp)
-                                            .clip(CircleShape)
-                                            .background(color)
-                                            .height(9.dp)
-                                            .width(9.dp)
-                                    )
-                                    Text(
-                                        text = category.name,
-                                        fontSize = 13.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                    )
-                                }
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = color.copy(alpha = 0.25f),
-                                selectedLabelColor = MaterialTheme.colorScheme.onSurface
-                            )
+                            icon = getCategoryVectorIcon(category.name),
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
 
-                // Detail Notes Text Input (e.g. food -> idly, transport -> auto)
+                // Detail Notes Text Input
                 val notePlaceholder = when (state.selectedCategory?.name?.lowercase()) {
-                    "food" -> "e.g. Idly, Lunch, Coffee, Snacks"
-                    "transport" -> "e.g. Auto, Metro, Cab, Fuel"
-                    "groceries" -> "e.g. Vegetables, Milk, Supermarket"
+                    "food" -> "e.g. Lunch, Coffee, Snacks"
+                    "transport" -> "e.g. Metro, Cab, Fuel"
+                    "shopping" -> "e.g. Groceries, Clothes"
                     "bills" -> "e.g. Electricity, Wifi, Rent"
-                    "shopping" -> "e.g. Clothes, Shoes, Electronics"
-                    "entertainment" -> "e.g. Movie, Concert, Games"
-                    "others" -> "e.g. Books, Gym, Gift"
-                    else -> "e.g. Idly, Auto, Notes (Optional)"
+                    "entertainment" -> "e.g. Movie, Streaming"
+                    else -> "Note (Optional)"
                 }
 
-                OutlinedTextField(
+                GlassTextField(
                     value = state.noteInput,
                     onValueChange = { viewModel.onNoteChanged(it) },
-                    label = { Text(if (state.isOthersSelected) "Category / Note" else "Note (Optional)") },
-                    placeholder = { Text(notePlaceholder) },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+                    placeholder = notePlaceholder
                 )
-
-                Spacer(modifier = Modifier.height(6.dp))
 
                 // Hero Amount Display
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) ShakeDesignTokens.GlassBorderDark else ShakeDesignTokens.GlassBorderLight)
                 ) {
                     Column(
                         modifier = Modifier
@@ -226,9 +162,9 @@ fun QuickEntryOverlayScreen(
                         Text(
                             text = if (state.amountInput.isEmpty()) "₹ 0.00" else "₹ ${state.amountInput}",
                             fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            color = if (state.transactionType == TransactionType.DEBIT) Color(0xFFE11D48) else Color(0xFF059669)
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = FinancialFormatter.TabularFontFamily,
+                            color = if (state.transactionType == TransactionType.DEBIT) ShakeDesignTokens.ExceededRed else ShakeDesignTokens.HealthyGreen
                         )
                     }
                 }
@@ -237,13 +173,10 @@ fun QuickEntryOverlayScreen(
                 if (state.errorMessage != null) {
                     Text(
                         text = state.errorMessage ?: "",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 2.dp)
+                        color = ShakeDesignTokens.ExceededRed,
+                        fontSize = 11.sp
                     )
                 }
-
-                Spacer(modifier = Modifier.height(10.dp))
 
                 // Numeric Keypad
                 OverlayKeypad(
@@ -252,10 +185,8 @@ fun QuickEntryOverlayScreen(
                     onBackspaceClick = { viewModel.onBackspacePressed() }
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Save Action Button
-                com.shakeexpense.app.ui.design.NeuButton(
+                // Save Action Button (with single check icon and clean label)
+                NeuButton(
                     onClick = {
                         if (state.isSaveEnabled) {
                             viewModel.saveExpense(source = TransactionSource.MANUAL_SHAKE) {
@@ -266,18 +197,19 @@ fun QuickEntryOverlayScreen(
                     isPrimary = state.isSaveEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .height(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = if (state.isSaveEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = if (state.isSaveEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (state.isSaving) "SAVING..." else "SAVE EXPENSE (✓)",
+                        text = if (state.isSaving) "SAVING..." else "SAVE EXPENSE",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         color = if (state.isSaveEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -302,16 +234,16 @@ fun OverlayKeypad(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         keys.forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 row.forEach { key ->
                     val isAction = key == "⌫"
-                    com.shakeexpense.app.ui.design.NeuKeypadButton(
+                    NeuKeypadButton(
                         symbol = key,
                         onClick = {
                             when (key) {
@@ -326,19 +258,5 @@ fun OverlayKeypad(
                 }
             }
         }
-    }
-}
-
-private fun parseHexColor(colorHex: String): Color {
-    return try {
-        val cleanHex = colorHex.removePrefix("#")
-        val colorInt = cleanHex.toLong(16)
-        if (cleanHex.length == 6) {
-            Color(colorInt or 0xFF000000)
-        } else {
-            Color(colorInt)
-        }
-    } catch (e: Exception) {
-        Color(0xFF64748B)
     }
 }

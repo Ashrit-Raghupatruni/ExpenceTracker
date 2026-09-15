@@ -1,52 +1,24 @@
 package com.shakeexpense.app.ui.entry
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shakeexpense.app.domain.model.TransactionType
+import com.shakeexpense.app.ui.design.*
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -56,116 +28,73 @@ fun ExpenseEntryContent(
     onSaveCompleted: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
+    val isDark = isAppDarkTheme()
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // Transaction Type Selector (DEBIT / CREDIT)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            TransactionTypeChip(
-                label = "DEBIT (Expense)",
-                isSelected = state.transactionType == TransactionType.DEBIT,
-                selectedColor = Color(0xFFE11D48),
-                onClick = { viewModel.onTransactionTypeChanged(TransactionType.DEBIT) }
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            TransactionTypeChip(
-                label = "CREDIT (Income)",
-                isSelected = state.transactionType == TransactionType.CREDIT,
-                selectedColor = Color(0xFF059669),
-                onClick = { viewModel.onTransactionTypeChanged(TransactionType.CREDIT) }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
+        NeuSegmentedControl(
+            items = listOf("DEBIT (Expense)", "CREDIT (Income)"),
+            selectedIndex = if (state.transactionType == TransactionType.DEBIT) 0 else 1,
+            onSelectIndex = { index ->
+                viewModel.onTransactionTypeChanged(if (index == 0) TransactionType.DEBIT else TransactionType.CREDIT)
+            }
+        )
 
         // Category Chips
         Text(
             text = "SELECT CATEGORY",
-            style = MaterialTheme.typography.labelSmall,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
+            letterSpacing = 0.6.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
-
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             state.categories.forEach { category ->
                 val isSelected = state.selectedCategory?.id == category.id
-                val color = parseHexColor(category.colorHex)
-
-                FilterChip(
-                    selected = isSelected,
+                NeuPill(
+                    label = category.name,
+                    isSelected = isSelected,
                     onClick = { viewModel.onCategorySelected(category) },
-                    label = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(end = 6.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .height(10.dp)
-                                    .width(10.dp)
-                            )
-                            Text(
-                                text = category.name,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            )
-                        }
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = color.copy(alpha = 0.25f),
-                        selectedLabelColor = MaterialTheme.colorScheme.onSurface
-                    )
+                    icon = getCategoryVectorIcon(category.name),
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
 
-        // Detail Notes Text Input (e.g. food -> idly, transport -> auto)
+        // Detail Notes Text Input
         val notePlaceholder = when (state.selectedCategory?.name?.lowercase()) {
-            "food" -> "e.g. Idly, Lunch, Coffee, Snacks"
-            "transport" -> "e.g. Auto, Metro, Cab, Fuel"
-            "groceries" -> "e.g. Vegetables, Milk, Supermarket"
+            "food" -> "e.g. Lunch, Coffee, Snacks"
+            "transport" -> "e.g. Metro, Cab, Fuel"
+            "shopping" -> "e.g. Groceries, Clothes"
             "bills" -> "e.g. Electricity, Wifi, Rent"
-            "shopping" -> "e.g. Clothes, Shoes, Electronics"
-            "entertainment" -> "e.g. Movie, Concert, Games"
-            "others" -> "e.g. Books, Gym, Gift"
-            else -> "e.g. Idly, Auto, Notes (Optional)"
+            "entertainment" -> "e.g. Movie, Streaming"
+            else -> "Note (Optional)"
         }
 
-        OutlinedTextField(
+        GlassTextField(
             value = state.noteInput,
             onValueChange = { viewModel.onNoteChanged(it) },
-            label = { Text(if (state.isOthersSelected) "Category / Note" else "Note (Optional)") },
-            placeholder = { Text(notePlaceholder) },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 6.dp)
+            placeholder = notePlaceholder
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
         // Hero Amount Display
-        Card(
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) ShakeDesignTokens.GlassBorderDark else ShakeDesignTokens.GlassBorderLight)
         ) {
             Column(
                 modifier = Modifier
@@ -174,16 +103,11 @@ fun ExpenseEntryContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "AMOUNT",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
                     text = if (state.amountInput.isEmpty()) "₹ 0.00" else "₹ ${state.amountInput}",
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
-                    color = if (state.transactionType == TransactionType.DEBIT) Color(0xFFE11D48) else Color(0xFF059669)
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = FinancialFormatter.TabularFontFamily,
+                    color = if (state.transactionType == TransactionType.DEBIT) ShakeDesignTokens.ExceededRed else ShakeDesignTokens.HealthyGreen
                 )
             }
         }
@@ -192,13 +116,10 @@ fun ExpenseEntryContent(
         if (state.errorMessage != null) {
             Text(
                 text = state.errorMessage ?: "",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 4.dp)
+                color = ShakeDesignTokens.ExceededRed,
+                fontSize = 11.sp
             )
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
 
         // Numeric Keypad
         NumericKeypad(
@@ -207,30 +128,32 @@ fun ExpenseEntryContent(
             onBackspaceClick = { viewModel.onBackspacePressed() }
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Save Button
-        Button(
+        // Save Button with single check icon
+        NeuButton(
             onClick = {
-                viewModel.saveExpense {
-                    onSaveCompleted()
+                if (state.isSaveEnabled) {
+                    viewModel.saveExpense {
+                        onSaveCompleted()
+                    }
                 }
             },
-            enabled = state.isSaveEnabled,
+            isPrimary = state.isSaveEnabled,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF2563EB)
-            )
+                .height(48.dp)
         ) {
-            Icon(Icons.Default.Check, contentDescription = null)
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = if (state.isSaveEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (state.isSaving) "SAVING..." else "SAVE (✓)",
+                text = if (state.isSaving) "SAVING..." else "SAVE EXPENSE",
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+                fontSize = 14.sp,
+                color = if (state.isSaveEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -243,21 +166,12 @@ fun TransactionTypeChip(
     selectedColor: Color,
     onClick: () -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = if (isSelected) selectedColor else Color.Transparent,
-        contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Text(
-            text = label,
-            fontSize = 13.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-        )
-    }
+    NeuPill(
+        label = label,
+        isSelected = isSelected,
+        onClick = onClick,
+        color = selectedColor
+    )
 }
 
 @Composable
@@ -284,73 +198,21 @@ fun NumericKeypad(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 row.forEach { key ->
-                    KeypadButton(
-                        key = key,
-                        modifier = Modifier.weight(1f),
+                    val isAction = key == "⌫"
+                    NeuKeypadButton(
+                        symbol = key,
                         onClick = {
                             when (key) {
-                                "." -> onDecimalClick()
                                 "⌫" -> onBackspaceClick()
+                                "." -> onDecimalClick()
                                 else -> onDigitClick(key)
                             }
-                        }
+                        },
+                        isAccent = isAction,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-fun KeypadButton(
-    key: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .aspectRatio(2.2f)
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-        ),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            if (key == "⌫") {
-                Icon(
-                    Icons.AutoMirrored.Filled.Backspace,
-                    contentDescription = "Backspace",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            } else {
-                Text(
-                    text = key,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    fontFamily = FontFamily.Monospace,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
-}
-
-private fun parseHexColor(colorHex: String): Color {
-    return try {
-        val cleanHex = colorHex.removePrefix("#")
-        val colorInt = cleanHex.toLong(16)
-        if (cleanHex.length == 6) {
-            Color(colorInt or 0xFF000000)
-        } else {
-            Color(colorInt)
-        }
-    } catch (e: Exception) {
-        Color(0xFF64748B)
     }
 }

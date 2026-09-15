@@ -90,10 +90,10 @@ class ShakeSensorService : Service() {
             sensorManager?.registerListener(
                 shakeDetector,
                 accelerometer,
-                SensorManager.SENSOR_DELAY_GAME
+                SensorManager.SENSOR_DELAY_UI
             )
             isSensorRegistered = true
-            Log.d(TAG, "Sensor registered for shake detection (SENSOR_DELAY_GAME)")
+            Log.d(TAG, "Sensor registered for shake detection (SENSOR_DELAY_UI)")
         }
     }
 
@@ -171,7 +171,7 @@ class ShakeSensorService : Service() {
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             val alertNotification = NotificationCompat.Builder(this, SHAKE_ALERT_CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("⚡ Shake Detected — Tap to Log Expense")
+                .setContentTitle("Shake Detected — Tap to Log Expense")
                 .setContentText("Tap to open Quick Entry keypad")
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)

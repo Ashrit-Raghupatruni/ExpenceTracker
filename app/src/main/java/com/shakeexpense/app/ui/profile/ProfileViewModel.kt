@@ -121,10 +121,10 @@ class ProfileViewModel(
                         it.copy(
                             financialSafetyScore = scoreResult?.score,
                             primaryOpportunity = scoreResult?.summary,
-                            safetySpendingSubScore = scoreResult?.spendingSubScore ?: "🟢 Healthy",
-                            safetyBudgetSubScore = scoreResult?.budgetSubScore ?: "🟢 Healthy",
-                            safetyRecurringSubScore = scoreResult?.recurringSubScore ?: "🟢 Healthy",
-                            safetyRiskSignalsSubScore = scoreResult?.riskSignalsSubScore ?: "🟢 None"
+                            safetySpendingSubScore = scoreResult?.spendingSubScore ?: "Healthy",
+                            safetyBudgetSubScore = scoreResult?.budgetSubScore ?: "Healthy",
+                            safetyRecurringSubScore = scoreResult?.recurringSubScore ?: "Healthy",
+                            safetyRiskSignalsSubScore = scoreResult?.riskSignalsSubScore ?: "None"
                         )
                     }
                 }

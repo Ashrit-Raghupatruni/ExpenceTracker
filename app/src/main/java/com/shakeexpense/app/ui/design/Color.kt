@@ -1,4 +1,4 @@
-﻿package com.shakeexpense.app.ui.design
+package com.shakeexpense.app.ui.design
 
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -55,4 +55,10 @@ object ShakeDesignTokens {
             Color(0xFF06B6D4)
         )
     )
+}
+
+@androidx.compose.runtime.Composable
+fun isAppDarkTheme(): Boolean {
+    val bg = androidx.compose.material3.MaterialTheme.colorScheme.background
+    return bg == Color(0xFF0F172A) || (bg.red * 0.299f + bg.green * 0.587f + bg.blue * 0.114f) < 0.5f
 }

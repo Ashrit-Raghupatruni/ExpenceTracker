@@ -13,23 +13,85 @@ class BankNotificationParser {
 
         // Debit indicator pattern (debited, paid, sent to X, spent, etc.)
         private val DEBIT_PATTERN = Pattern.compile(
-            """(?i)\b(debited|spent|paid|withdrawn|transferred to|payment of|purchase of)\b"""
+            """(?i)\b(debited|spent|paid|withdrawn|transferred to|payment of|purchase of|sent|autopay debited|vpa debit)\b"""
         )
 
         // Credit indicator pattern (credited, received, deposited, cashback, refund, sent to you)
         private val CREDIT_PATTERN = Pattern.compile(
-            """(?i)\b(credited|received|deposited|added|refund|cashback|to you)\b"""
+            """(?i)\b(credited|received|deposited|added|refund|cashback|to you|salary credited)\b"""
         )
 
         // Payee/Merchant pattern
         private val MERCHANT_PATTERN = Pattern.compile(
-            """(?i)(?:to|at|vpa|info|for|from)\s+([A-Za-z0-9\.\-_@\s]{2,30}?)(?:\s+on|\s+ref|\s+upi|\.|\,|$|\s+bal|\s+via|\s+using|\s+avl|\s+acc)"""
+            """(?i)(?:to|at|vpa|info|for|from|paid to|transferred to)\s+([A-Za-z0-9\.\-_@\s]{2,30}?)(?:\s+on|\s+ref|\s+upi|\.|\,|$|\s+bal|\s+via|\s+using|\s+avl|\s+acc)"""
+        )
+
+        // Account Number / Card Number pattern (e.g. A/c ending XX1234, Card XX5678, acct *9876)
+        private val ACCOUNT_NUMBER_PATTERN = Pattern.compile(
+            """(?i)(?:a/c|acct|account|card|ac|ending with|ending in|no\.)\s*(?:no\.?\s*)?(?:[x*XN]+)?(\d{3,6})\b|(?:xx|[*]{2,})(\d{3,6})\b"""
+        )
+
+        // UPI Reference Number / UTR / RRN pattern
+        private val UPI_REF_PATTERN = Pattern.compile(
+            """(?i)(?:upi ref|ref no|rrn|utr|txn id|txn no|reference no|upi rrn)\s*[:.]?\s*([0-9]{9,16})\b"""
+        )
+
+        // UPI VPA pattern (e.g. user@okhdfcbank, merchant@paytm)
+        private val UPI_VPA_PATTERN = Pattern.compile(
+            """\b([a-zA-Z0-9.\-_]{2,35}@[a-zA-Z0-9]{2,15})\b"""
+        )
+
+        // Non-financial message rejection patterns (OTP, promotional, loan offers)
+        private val OTP_PATTERN = Pattern.compile(
+            """(?i)\b(otp|one time password|verification code|secret code|auth code|do not share|valid for \d+ min)\b"""
+        )
+
+        private val PROMO_PATTERN = Pattern.compile(
+            """(?i)\b(pre-approved|apply for loan|congratulations|reward points|special offer|flat \d+% off|loan offer|credit limit increase)\b"""
         )
 
         // Generic app title names to ignore as payees
         private val GENERIC_TITLES = setOf(
             "phonepe", "gpay", "google pay", "paytm", "bhim", "cred",
-            "bank alert", "transaction alert", "upi alert", "sms", "messages"
+            "bank alert", "transaction alert", "upi alert", "sms", "messages", "alert", "notification"
+        )
+
+        // Known Bank Names and their detection signatures
+        private val BANK_SIGNATURE_MAP = mapOf(
+            "HDFC" to "HDFC Bank",
+            "ICICI" to "ICICI Bank",
+            "SBI" to "State Bank of India",
+            "STATE BANK" to "State Bank of India",
+            "AXIS" to "Axis Bank",
+            "KOTAK" to "Kotak Mahindra Bank",
+            "PNB" to "Punjab National Bank",
+            "PUNJAB" to "Punjab National Bank",
+            "CANARA" to "Canara Bank",
+            "BOB" to "Bank of Baroda",
+            "BARODA" to "Bank of Baroda",
+            "IDFC" to "IDFC FIRST Bank",
+            "YES" to "Yes Bank",
+            "INDUS" to "IndusInd Bank",
+            "UNION" to "Union Bank of India",
+            "FED" to "Federal Bank",
+            "FEDERAL" to "Federal Bank",
+            "RBL" to "RBL Bank",
+            "AUBANK" to "AU Small Finance Bank",
+            "SCB" to "Standard Chartered",
+            "HSBC" to "HSBC Bank",
+            "DBS" to "DBS Bank",
+            "BANDHAN" to "Bandhan Bank",
+            "EQUITAS" to "Equitas Small Finance Bank",
+            "UJJIVAN" to "Ujjivan Small Finance Bank",
+            "JUPITER" to "Jupiter Money",
+            "FI" to "Fi Money",
+            "SLICE" to "Slice",
+            "PAYTM" to "Paytm Payments Bank",
+            "AIRTEL" to "Airtel Payments Bank",
+            "PHONEPE" to "PhonePe",
+            "GPAY" to "Google Pay",
+            "BHIM" to "BHIM UPI",
+            "CRED" to "CRED"
         )
 
         // Known UPI & Digital Payment Apps
@@ -102,10 +164,10 @@ class BankNotificationParser {
         )
 
         // Category Heuristics
-        private val FOOD_KEYWORDS = listOf("swiggy", "zomato", "mcdonald", "starbucks", "kfc", "burger", "domino", "pizza", "dine", "cafe", "restaurant", "subway", "chai", "bakery")
+        private val FOOD_KEYWORDS = listOf("swiggy", "zomato", "mcdonald", "starbucks", "kfc", "burger", "domino", "pizza", "dine", "cafe", "restaurant", "subway", "chai", "bakery", "food", "eat")
         private val TRANSPORT_KEYWORDS = listOf("uber", "ola", "rapido", "metro", "irctc", "rail", "petrol", "fuel", "shell", "hpcl", "bpcl", "ioc", "parking", "fastag", "toll", "cab")
         private val GROCERIES_KEYWORDS = listOf("blinkit", "zepto", "instamart", "bigbasket", "supermarket", "dmart", "grocery", "nature basket", "spencer", "more retail", "fruits", "vegetables")
-        private val BILLS_KEYWORDS = listOf("bescom", "airtel", "jio", "vi", "electricity", "water", "gas", "broadband", "bill", "tatasky", "recharge", "dth", "wifi", "insurance", "rent", "maintenance")
+        private val BILLS_KEYWORDS = listOf("bescom", "airtel", "jio", "vi", "electricity", "water", "gas", "broadband", "bill", "tatasky", "recharge", "dth", "wifi", "insurance", "rent", "maintenance", "tneb")
         private val SHOPPING_KEYWORDS = listOf("amazon", "flipkart", "myntra", "zara", "h&m", "ajio", "nykaa", "retail", "meesho", "croma", "reliance", "lifestyle", "westside", "shopping")
         private val ENTERTAINMENT_KEYWORDS = listOf("pvr", "inox", "bookmyshow", "netflix", "spotify", "prime", "hotstar", "steam", "cinema", "movie", "playstation", "gaming", "disney", "youtube")
     }
@@ -151,6 +213,10 @@ class BankNotificationParser {
         val fullContent = if (title.isNotBlank()) "$title. $text" else text
         if (fullContent.isBlank()) return null
 
+        // Filter out OTP and promotional messages immediately
+        if (OTP_PATTERN.matcher(fullContent).find()) return null
+        if (PROMO_PATTERN.matcher(fullContent).find() && !DEBIT_PATTERN.matcher(fullContent).find()) return null
+
         // 1. Extract Amount
         val amountMatcher = AMOUNT_PATTERN.matcher(fullContent)
         if (!amountMatcher.find()) return null
@@ -169,7 +235,7 @@ class BankNotificationParser {
 
         // 2. Extract Transaction Type
         val lowerContent = fullContent.lowercase()
-        val isSentToYou = lowerContent.contains("to you") || lowerContent.contains("received")
+        val isSentToYou = lowerContent.contains("to you") || lowerContent.contains("received") || lowerContent.contains("credited")
         val hasDebit = DEBIT_PATTERN.matcher(fullContent).find() || (lowerContent.contains("sent") && !isSentToYou)
         val hasCredit = CREDIT_PATTERN.matcher(fullContent).find() || isSentToYou
 
@@ -180,7 +246,37 @@ class BankNotificationParser {
             else -> TransactionType.DEBIT
         }
 
-        // 3. Extract Merchant / Payee
+        // 3. Extract Bank Name
+        var bankName: String? = null
+        for ((signature, name) in BANK_SIGNATURE_MAP) {
+            if (title.contains(signature, ignoreCase = true) || text.contains(signature, ignoreCase = true) || packageName.contains(signature.lowercase())) {
+                bankName = name
+                break
+            }
+        }
+
+        // 4. Extract Account / Card Last Digits
+        var accountLastDigits: String? = null
+        val accountMatcher = ACCOUNT_NUMBER_PATTERN.matcher(fullContent)
+        if (accountMatcher.find()) {
+            accountLastDigits = accountMatcher.group(1) ?: accountMatcher.group(2)
+        }
+
+        // 5. Extract UPI Reference Number (UTR / RRN)
+        var upiRef: String? = null
+        val upiRefMatcher = UPI_REF_PATTERN.matcher(fullContent)
+        if (upiRefMatcher.find()) {
+            upiRef = upiRefMatcher.group(1)?.trim()
+        }
+
+        // 6. Extract UPI VPA
+        var upiVpa: String? = null
+        val upiVpaMatcher = UPI_VPA_PATTERN.matcher(fullContent)
+        if (upiVpaMatcher.find()) {
+            upiVpa = upiVpaMatcher.group(1)?.trim()
+        }
+
+        // 7. Extract Merchant / Payee
         var merchant: String? = null
         val merchantMatcher = MERCHANT_PATTERN.matcher(text)
         if (merchantMatcher.find()) {
@@ -198,8 +294,15 @@ class BankNotificationParser {
             }
         }
 
-        // 4. Infer Category ID
+        // 8. Infer Category ID
         val categoryId = inferCategoryId(fullContent, merchant)
+
+        // 9. Reliability Verification: Must have positive amount, debit/credit, and authentic source/account/bank identifiers
+        val hasReliableIdentifiers = bankName != null || accountLastDigits != null || upiVpa != null || upiRef != null ||
+                SUPPORTED_PAYMENT_PACKAGES.contains(packageName.trim().lowercase()) ||
+                SUPPORTED_BANKING_PACKAGES.contains(packageName.trim().lowercase())
+
+        val isReliable = amountCents > 0L && hasReliableIdentifiers
 
         return ParsedBankTransaction(
             amountCents = amountCents,
@@ -207,7 +310,12 @@ class BankNotificationParser {
             merchantOrPayee = merchant,
             suggestedCategoryId = categoryId,
             timestamp = timestamp,
-            rawPackageName = packageName
+            rawPackageName = packageName,
+            bankName = bankName,
+            accountLastDigits = accountLastDigits,
+            upiRefNumber = upiRef,
+            upiVpa = upiVpa,
+            isReliableFinancialTransaction = isReliable
         )
     }
 
@@ -225,3 +333,4 @@ class BankNotificationParser {
         }
     }
 }
+

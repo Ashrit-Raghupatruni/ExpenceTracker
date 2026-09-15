@@ -66,6 +66,9 @@ class BankNotificationListenerService : NotificationListenerService() {
             timestamp = sbn.postTime
         ) ?: return
 
+        // Strict Reliability Check: reject non-financial alerts, OTPs, promotions
+        if (!parsed.isReliableFinancialTransaction) return
+
         val app = application as? ShakeExpenseApp ?: return
         val useCase = processUseCase ?: run {
             val db = app.database
@@ -98,7 +101,17 @@ class BankNotificationListenerService : NotificationListenerService() {
             if (transaction.type == TransactionType.CREDIT) "from ${transaction.merchantOrPayee}" else "at ${transaction.merchantOrPayee}"
         } else ""
 
-        val title = "Confirm: $formattedAmount $typeLabel $merchantLabel".trim()
+        val sourcePrefix = when {
+            !transaction.bankName.isNullOrBlank() && !transaction.accountLastDigits.isNullOrBlank() ->
+                "${transaction.bankName} (..${transaction.accountLastDigits}): "
+            !transaction.bankName.isNullOrBlank() ->
+                "${transaction.bankName}: "
+            !transaction.accountLastDigits.isNullOrBlank() ->
+                "A/c ..${transaction.accountLastDigits}: "
+            else -> ""
+        }
+
+        val title = "$sourcePrefix$formattedAmount $typeLabel $merchantLabel".trim()
         val categoryName = when (transaction.suggestedCategoryId) {
             1L -> "Food"
             2L -> "Transport"
