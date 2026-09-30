@@ -212,7 +212,7 @@ class AiFinancialAssistantUseCase(
         }
 
         // 4. 50/30/20 Budgeting Rule & Savings Optimization
-        if (q.contains("50/30/20") || q.contains("savings rate") || (q.contains("how") && q.contains("save")) || q.contains("budget rule")) {
+        if (q.contains("50/30/20") || q.contains("50 30 20") || q.contains("50-30-20") || q.contains("savings rate") || (q.contains("how") && q.contains("save")) || q.contains("budget rule") || q.contains("rule")) {
             val income = if (monthlyIncomeCents > 0) monthlyIncomeCents / 100 else 0L
             val needsCategories = setOf("Bills", "Groceries", "Health", "Education")
             val wantsCategories = setOf("Food", "Shopping", "Entertainment", "Others")

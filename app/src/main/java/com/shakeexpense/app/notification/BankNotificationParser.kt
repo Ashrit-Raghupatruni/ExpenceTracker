@@ -23,7 +23,7 @@ class BankNotificationParser {
 
         // Payee/Merchant pattern
         private val MERCHANT_PATTERN = Pattern.compile(
-            """(?i)(?:to|at|vpa|info|for|from|paid to|transferred to)\s+([A-Za-z0-9\.\-_@\s]{2,30}?)(?:\s+on|\s+ref|\s+upi|\.|\,|$|\s+bal|\s+via|\s+using|\s+avl|\s+acc)"""
+            """(?i)(?:sent to|paid to|transferred to|payment to|to|at|vpa|info|for|from)\s+([A-Za-z0-9\.\-_@\s]{2,35}?)(?:\s+on|\s+ref|\s+upi|\.|\,|$|\s+bal|\s+via|\s+using|\s+avl|\s+acc)"""
         )
 
         // Account Number / Card Number pattern (e.g. A/c ending XX1234, Card XX5678, acct *9876)
@@ -97,8 +97,10 @@ class BankNotificationParser {
         // Known UPI & Digital Payment Apps
         val SUPPORTED_PAYMENT_PACKAGES = setOf(
             "com.phonepe.app",
+            "com.phonepe.app.business",
             "com.google.android.apps.nbu.paisa.user",
             "net.one97.paytm",
+            "net.one97.paytm.business",
             "in.org.npci.upiapp", // BHIM
             "com.dreamplug.androidapp", // CRED
             "com.amazon.mpay.app",
@@ -108,7 +110,14 @@ class BankNotificationParser {
             "com.freecharge.android",
             "com.sliceit",
             "money.jupiter",
-            "money.fi"
+            "money.fi",
+            "com.fampay.in",
+            "com.myairtelapp",
+            "com.jio.myjio",
+            "com.tatadigital.tcp",
+            "com.popclub.app",
+            "org.altruist.BajajPay",
+            "com.olive.upi"
         )
 
         // Known Banking Apps
@@ -152,14 +161,14 @@ class BankNotificationParser {
             "com.vivo.mms"
         )
 
-        // Bank / Financial SMS Sender Identifiers (e.g. VK-HDFCBK, AXISBK, SBIINB, PAYTM, etc.)
+        // Bank / Financial SMS Sender Identifiers (e.g. VK-HDFCBK, ADHDFCBK, AXISBK, SBIINB, PAYTM, etc.)
         val BANK_SMS_SENDER_REGEX = Pattern.compile(
-            """(?i)\b([A-Z]{2}-)?(HDFC|ICICI|SBI|AXIS|KOTAK|PNB|CANARA|BOB|IDFC|YES|INDUS|UNION|FED|RBL|AUBANK|SCB|HSBC|DBS|PAYTM|PHONEPE|BHIM|CRED|GPAY|AMAZONPAY|BARODA|CENTRAL|SYND|VIJAYA|IOB|UCO|ALLAHABAD|BANDHAN|EQUITAS|UJJIVAN|JUPITER|SLICE|FI|MONEY|BANK|ALERTS|TRANS|UPI)[A-Z0-9]*\b"""
+            """(?i)\b([A-Z]{2}-?)?(HDFC|ICICI|SBI|AXIS|KOTAK|PNB|CANARA|BOB|IDFC|YES|INDUS|UNION|FED|RBL|AUBANK|SCB|HSBC|DBS|PAYTM|PHONEPE|BHIM|CRED|GPAY|AMAZONPAY|BARODA|CENTRAL|SYND|VIJAYA|IOB|UCO|ALLAHABAD|BANDHAN|EQUITAS|UJJIVAN|JUPITER|SLICE|FI|MONEY|BANK|ALERTS|TRANS|UPI)[A-Z0-9]*\b"""
         )
 
         // Financial transaction intent keywords required for SMS parsing
         val FINANCIAL_TRANSACTION_KEYWORDS = listOf(
-            "debited", "credited", "spent", "paid", "withdrawn", "received", "transferred",
+            "debited", "credited", "spent", "paid", "withdrawn", "received", "transferred", "sent",
             "a/c", "acct", "account", "vpa", "upi", "card", "inr", "rs.", "rs ", "bal", "avl bal"
         )
 
@@ -180,20 +189,29 @@ class BankNotificationParser {
         val cleanPkg = packageName.trim().lowercase()
 
         // 1. Direct match with verified Payment / UPI Apps
-        if (SUPPORTED_PAYMENT_PACKAGES.contains(cleanPkg)) return true
+        if (SUPPORTED_PAYMENT_PACKAGES.any { cleanPkg.contains(it) || it.contains(cleanPkg) }) return true
 
         // 2. Direct match with verified Banking Apps
-        if (SUPPORTED_BANKING_PACKAGES.contains(cleanPkg)) return true
+        if (SUPPORTED_BANKING_PACKAGES.any { cleanPkg.contains(it) || it.contains(cleanPkg) }) return true
 
-        // 3. SMS Apps: only if sender/title is a verified Bank/UPI sender code AND text contains transaction indicators
-        if (SMS_PACKAGES.contains(cleanPkg) || cleanPkg.contains("mms") || cleanPkg.contains("messaging")) {
-            val titleMatchesBank = BANK_SMS_SENDER_REGEX.matcher(title).find()
-            val textMatchesBankHeader = BANK_SMS_SENDER_REGEX.matcher(text.take(30)).find()
-            val hasFinancialIntent = FINANCIAL_TRANSACTION_KEYWORDS.count { text.lowercase().contains(it) } >= 2
+        // 3. SMS Apps: if package is SMS or text contains strong financial signals
+        val isSmsApp = SMS_PACKAGES.contains(cleanPkg) || cleanPkg.contains("mms") || cleanPkg.contains("messaging") || cleanPkg.contains("message") || cleanPkg.contains("sms")
+        val titleMatchesBank = BANK_SMS_SENDER_REGEX.matcher(title).find()
+        val textMatchesBankHeader = BANK_SMS_SENDER_REGEX.matcher(text.take(35)).find()
+        val hasFinancialIntent = FINANCIAL_TRANSACTION_KEYWORDS.count { text.lowercase().contains(it) } >= 2
+        val hasAmount = AMOUNT_PATTERN.matcher(text).find() || AMOUNT_PATTERN.matcher(title).find()
 
-            if ((titleMatchesBank || textMatchesBankHeader) && hasFinancialIntent) {
-                return true
-            }
+        if (isSmsApp && (titleMatchesBank || textMatchesBankHeader || (hasFinancialIntent && hasAmount))) {
+            return true
+        }
+
+        // 4. Fallback for any OEM-customized or cloned UPI app with clear monetary transaction signal
+        val combined = "$title $text".lowercase()
+        val hasDebitOrCredit = DEBIT_PATTERN.matcher(combined).find() || CREDIT_PATTERN.matcher(combined).find() || combined.contains("sent to") || combined.contains("received from")
+        val hasAccountOrUpi = ACCOUNT_NUMBER_PATTERN.matcher(combined).find() || UPI_VPA_PATTERN.matcher(combined).find() || UPI_REF_PATTERN.matcher(combined).find() || combined.contains("upi") || combined.contains("vpa")
+
+        if (hasAmount && hasDebitOrCredit && (hasAccountOrUpi || titleMatchesBank)) {
+            return true
         }
 
         return false
@@ -254,6 +272,19 @@ class BankNotificationParser {
                 break
             }
         }
+        if (bankName == null) {
+            val pkg = packageName.lowercase()
+            when {
+                pkg.contains("phonepe") -> bankName = "PhonePe"
+                pkg.contains("paisa") || pkg.contains("gpay") -> bankName = "Google Pay"
+                pkg.contains("paytm") -> bankName = "Paytm"
+                pkg.contains("cred") -> bankName = "CRED"
+                pkg.contains("amazon") -> bankName = "Amazon Pay"
+                pkg.contains("bhim") || pkg.contains("npci") -> bankName = "BHIM UPI"
+                pkg.contains("jupiter") -> bankName = "Jupiter Money"
+                pkg.contains("fi") -> bankName = "Fi Money"
+            }
+        }
 
         // 4. Extract Account / Card Last Digits
         var accountLastDigits: String? = null
@@ -281,7 +312,7 @@ class BankNotificationParser {
         val merchantMatcher = MERCHANT_PATTERN.matcher(text)
         if (merchantMatcher.find()) {
             val candidate = merchantMatcher.group(1)?.trim()
-            if (!candidate.isNullOrBlank() && candidate.length in 2..30 && !candidate.equals("you", ignoreCase = true)) {
+            if (!candidate.isNullOrBlank() && candidate.length in 2..35 && !candidate.equals("you", ignoreCase = true)) {
                 merchant = candidate
             }
         }
@@ -294,13 +325,18 @@ class BankNotificationParser {
             }
         }
 
+        // If merchant is still null but we found a UPI VPA, use the UPI VPA as the merchant identifier
+        if (merchant.isNullOrBlank() && !upiVpa.isNullOrBlank()) {
+            merchant = upiVpa
+        }
+
         // 8. Infer Category ID
         val categoryId = inferCategoryId(fullContent, merchant)
 
         // 9. Reliability Verification: Must have positive amount, debit/credit, and authentic source/account/bank identifiers
         val hasReliableIdentifiers = bankName != null || accountLastDigits != null || upiVpa != null || upiRef != null ||
-                SUPPORTED_PAYMENT_PACKAGES.contains(packageName.trim().lowercase()) ||
-                SUPPORTED_BANKING_PACKAGES.contains(packageName.trim().lowercase())
+                SUPPORTED_PAYMENT_PACKAGES.any { packageName.trim().lowercase().contains(it) || it.contains(packageName.trim().lowercase()) } ||
+                SUPPORTED_BANKING_PACKAGES.any { packageName.trim().lowercase().contains(it) || it.contains(packageName.trim().lowercase()) }
 
         val isReliable = amountCents > 0L && hasReliableIdentifiers
 

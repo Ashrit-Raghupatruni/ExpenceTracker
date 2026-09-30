@@ -41,6 +41,16 @@ class BankNotificationListenerService : NotificationListenerService() {
         }
     }
 
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        android.util.Log.d("BankNotificationListener", "BankNotificationListenerService connected successfully")
+    }
+
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        android.util.Log.d("BankNotificationListener", "BankNotificationListenerService disconnected")
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
         if (sbn == null) return

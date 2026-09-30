@@ -104,11 +104,13 @@ enum class MainNavigationSection {
     PROFILE
 }
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), com.razorpay.PaymentResultWithDataListener {
 
     private val appContainer by lazy { (application as ShakeExpenseApp).container }
     private val themePreferences by lazy { appContainer.themePreferences }
     private val authRepository by lazy { appContainer.authRepository }
+
+    private var pendingRazorpayPlan: com.shakeexpense.app.domain.model.SubscriptionPlan? = null
 
     private val trackerViewModel: TrackerViewModel by viewModels {
         val currentUserId = authRepository.getCurrentProfile().userId
@@ -125,6 +127,35 @@ class MainActivity : ComponentActivity() {
 
     private val profileViewModel: ProfileViewModel by viewModels {
         appContainer.createProfileViewModelFactory()
+    }
+
+    fun launchRazorpayPayment(plan: com.shakeexpense.app.domain.model.SubscriptionPlan, isYearly: Boolean) {
+        pendingRazorpayPlan = plan
+        val profile = authRepository.getCurrentProfile()
+        val success = com.shakeexpense.app.payment.RazorpayPaymentManager.startPayment(
+            activity = this,
+            targetPlan = plan,
+            isYearly = isYearly,
+            userEmail = profile.email,
+            userPhone = null
+        )
+        if (!success) {
+            android.widget.Toast.makeText(this, "Could not launch Razorpay Checkout", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onPaymentSuccess(razorpayPaymentId: String?, paymentData: com.razorpay.PaymentData?) {
+        val plan = pendingRazorpayPlan ?: com.shakeexpense.app.domain.model.SubscriptionPlan.PLUS
+        val resolvedId = razorpayPaymentId ?: paymentData?.paymentId
+        profileViewModel.onPaymentCompleted(plan, resolvedId)
+        pendingRazorpayPlan = null
+        android.widget.Toast.makeText(this, "Payment Verified! Membership upgraded to ${plan.displayName}", android.widget.Toast.LENGTH_LONG).show()
+    }
+
+    override fun onPaymentError(code: Int, response: String?, paymentData: com.razorpay.PaymentData?) {
+        pendingRazorpayPlan = null
+        val msg = if (!response.isNullOrBlank()) response else "Payment cancelled or unsuccessful"
+        android.widget.Toast.makeText(this, "Payment Notice: $msg", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private val googleSignInLauncher = registerForActivityResult(
@@ -199,6 +230,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         hasOverlayPermissionState.value = checkOverlayPermission()
 
+        com.shakeexpense.app.payment.RazorpayPaymentManager.preload(this)
+
         val app = application as ShakeExpenseApp
         val currentUserId = authRepository.getCurrentProfile().userId
         lifecycleScope.launch {
@@ -242,7 +275,7 @@ class MainActivity : ComponentActivity() {
                                     NavigationBarItem(
                                         selected = currentSection == MainNavigationSection.FAMILY,
                                         onClick = { currentSection = MainNavigationSection.FAMILY },
-                                        icon = { Icon(Icons.Default.Group, contentDescription = "Family Hub") },
+                                        icon = { Icon(Icons.Default.Group, contentDescription = "Family") },
                                         label = { Text("Family", fontWeight = if (currentSection == MainNavigationSection.FAMILY) FontWeight.Bold else FontWeight.Normal) }
                                     )
                                     NavigationBarItem(
@@ -254,25 +287,22 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
-                    ) { innerPadding ->
+                    ) { paddingValues ->
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(innerPadding)
+                                .padding(paddingValues)
                         ) {
-                            // Permission helper banner for background shake popup
+                            // Persistent Non-Intrusive Overlay Permission Banner (if not granted)
                             if (!hasOverlayPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(8.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
-                                    shape = RoundedCornerShape(8.dp)
+                                Surface(
+                                    color = Color(0xFFFEF3C7),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(10.dp),
+                                            .padding(horizontal = 16.dp, vertical = 8.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -338,7 +368,10 @@ class MainActivity : ComponentActivity() {
                                 MainNavigationSection.PROFILE -> {
                                     ProfileScreen(
                                         viewModel = profileViewModel,
-                                        onLaunchGoogleSignIn = { launchGoogleSignIn() }
+                                        onLaunchGoogleSignIn = { launchGoogleSignIn() },
+                                        onInitiateRazorpay = { plan, isYearly ->
+                                            launchRazorpayPayment(plan, isYearly)
+                                        }
                                     )
                                 }
                             }
@@ -386,6 +419,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         hasOverlayPermissionState.value = checkOverlayPermission()
-        ShakeSensorService.startService(this)
+        if (com.shakeexpense.app.ui.theme.ThemePreferences.isShakeEnabled(this)) {
+            ShakeSensorService.startService(this)
+        } else {
+            ShakeSensorService.stopService(this)
+        }
     }
 }

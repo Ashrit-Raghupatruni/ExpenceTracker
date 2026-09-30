@@ -85,10 +85,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.rememberDatePickerState
 import com.shakeexpense.app.domain.usecase.ResetPeriod
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -121,12 +124,21 @@ import java.util.Locale
 fun ProfileScreen(
     viewModel: ProfileViewModel,
     onLaunchGoogleSignIn: () -> Unit,
+    onInitiateRazorpay: ((com.shakeexpense.app.domain.model.SubscriptionPlan, Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
     var showSignOutConfirmDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+
+    LaunchedEffect(state.paymentSuccessMessage) {
+        state.paymentSuccessMessage?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            viewModel.clearPaymentMessage()
+        }
+    }
+
     var hasOverlayPermission by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -417,6 +429,7 @@ fun ProfileScreen(
         SubscriptionPlansDialog(
             currentPlan = state.subscriptionPlan,
             onSelectPlan = { plan -> viewModel.selectPlan(plan) },
+            onInitiateRazorpay = onInitiateRazorpay,
             onDismiss = { viewModel.onShowSubscriptionModal(false) }
         )
     }
@@ -640,8 +653,21 @@ fun ProfileScreen(
         // 3. Permissions & Setup Card
         item {
             PermissionsSetupCard(
+                isShakeEnabled = state.isShakeEnabled,
+                isShakeAnywhereEnabled = state.isShakeAnywhereEnabled,
                 hasOverlayPermission = hasOverlayPermission,
                 hasNotificationPermission = hasNotificationPermission,
+                onToggleShakeEnabled = { enabled ->
+                    viewModel.setShakeEnabled(enabled)
+                    if (!enabled) {
+                        com.shakeexpense.app.sensor.ShakeSensorService.stopService(context)
+                    } else {
+                        com.shakeexpense.app.sensor.ShakeSensorService.startService(context)
+                    }
+                },
+                onToggleShakeAnywhere = { enabled ->
+                    viewModel.setShakeAnywhereEnabled(enabled)
+                },
                 onOpenOverlaySettings = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         val intent = Intent(
@@ -1443,8 +1469,12 @@ private fun GuideAccordionItem(
 
 @Composable
 private fun PermissionsSetupCard(
+    isShakeEnabled: Boolean,
+    isShakeAnywhereEnabled: Boolean,
     hasOverlayPermission: Boolean,
     hasNotificationPermission: Boolean,
+    onToggleShakeEnabled: (Boolean) -> Unit,
+    onToggleShakeAnywhere: (Boolean) -> Unit,
     onOpenOverlaySettings: () -> Unit,
     onOpenNotificationSettings: () -> Unit
 ) {
@@ -1468,13 +1498,13 @@ private fun PermissionsSetupCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "Permissions & Setup",
+                        text = "Permissions & Gestures",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Configure device permissions for instant HUD & smart parsing",
+                        text = "Configure device shake logger & bank transaction detector",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1483,20 +1513,95 @@ private fun PermissionsSetupCard(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
-            // 1. Shake Anywhere Dropdown (Overlay Permission)
-            PermissionSetupDropdown(
-                title = "Shake Anywhere",
-                description = "Required to trigger the Quick Entry keypad instantly from the Android Home Screen or while using other apps.",
-                isGranted = hasOverlayPermission,
-                actionText = if (hasOverlayPermission) "Manage Overlay Setting" else "Open Overlay Settings",
-                onAction = onOpenOverlaySettings,
-                icon = Icons.Default.Vibration
-            )
+            // 1. Master Shake Detection Toggle
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (isShakeEnabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Vibration,
+                            contentDescription = null,
+                            tint = if (isShakeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Shake Gesture Detection",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (isShakeEnabled) "Active: Shake device to log an expense" else "Disabled: Background sensor turned off",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
 
-            // 2. Bank Notification Detection Dropdown
+                    Switch(
+                        checked = isShakeEnabled,
+                        onCheckedChange = onToggleShakeEnabled,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            }
+
+            // 2. Shake Anywhere (System Overlay Setting) - only visible/relevant if shake is enabled
+            if (isShakeEnabled) {
+                PermissionSetupDropdown(
+                    title = "Shake Anywhere (Home & Other Apps)",
+                    description = "When enabled with Overlay permission, shaking your phone while on the Android Home screen or inside other apps pops up the Quick Entry keypad instantly.",
+                    isGranted = hasOverlayPermission && isShakeAnywhereEnabled,
+                    actionText = if (hasOverlayPermission) "Manage Overlay Permission" else "Enable Overlay Permission",
+                    onAction = onOpenOverlaySettings,
+                    icon = Icons.Default.Vibration,
+                    secondaryToggle = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Allow Shake outside the app",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Switch(
+                                checked = isShakeAnywhereEnabled,
+                                onCheckedChange = onToggleShakeAnywhere,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+                    }
+                )
+            }
+
+            // 3. Bank Notification Detection Dropdown
             PermissionSetupDropdown(
-                title = "Bank Notification Detection",
-                description = "ShakeExpense reads supported bank and payment notifications on your device to detect debit/credit transactions and ask for confirmation before adding them to your expenses.",
+                title = "Bank & UPI Notification Detection",
+                description = "ShakeExpense automatically detects financial transactions from PhonePe, Google Pay, Paytm, BHIM, and Bank SMS on this device and prompts you to confirm adding them as expenses.",
                 isGranted = hasNotificationPermission,
                 actionText = if (hasNotificationPermission) "Manage Notification Access" else "Enable Notification Access",
                 onAction = onOpenNotificationSettings,
@@ -1514,7 +1619,8 @@ private fun PermissionSetupDropdown(
     actionText: String,
     onAction: () -> Unit,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    initiallyExpanded: Boolean = false
+    initiallyExpanded: Boolean = false,
+    secondaryToggle: (@Composable () -> Unit)? = null
 ) {
     var expanded by remember { mutableStateOf(initiallyExpanded) }
 
@@ -1607,6 +1713,10 @@ private fun PermissionSetupDropdown(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 16.sp
                 )
+
+                if (secondaryToggle != null) {
+                    secondaryToggle()
+                }
 
                 Button(
                     onClick = onAction,
@@ -2481,18 +2591,25 @@ fun SubscriptionTierCard(
 fun SubscriptionPlansDialog(
     currentPlan: com.shakeexpense.app.domain.model.SubscriptionPlan,
     onSelectPlan: (com.shakeexpense.app.domain.model.SubscriptionPlan) -> Unit,
+    onInitiateRazorpay: ((com.shakeexpense.app.domain.model.SubscriptionPlan, Boolean) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     var pendingPaymentPlan by remember { mutableStateOf<com.shakeexpense.app.domain.model.SubscriptionPlan?>(null) }
 
     if (pendingPaymentPlan != null) {
         MembershipPaymentDialog(
             targetPlan = pendingPaymentPlan!!,
             onDismiss = { pendingPaymentPlan = null },
-            onPaymentSuccess = { plan ->
-                onSelectPlan(plan)
+            onInitiatePayment = { plan, isYearly ->
                 pendingPaymentPlan = null
                 onDismiss()
+                if (onInitiateRazorpay != null) {
+                    onInitiateRazorpay(plan, isYearly)
+                } else {
+                    // Fallback to direct selection if activity hook not passed
+                    onSelectPlan(plan)
+                }
             }
         )
     }
@@ -2514,7 +2631,9 @@ fun SubscriptionPlansDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // FREE PLAN
+                // FREE PLAN - Non-degradable if user already has PLUS or FAMILY_PRO
+                val isFreeCurrent = currentPlan == com.shakeexpense.app.domain.model.SubscriptionPlan.FREE
+                val isFreeDegradeBlocked = currentPlan.level > com.shakeexpense.app.domain.model.SubscriptionPlan.FREE.level
                 PlanOptionCard(
                     title = "FREE — ₹0",
                     subtitle = "Habit & Core Expense Tracking",
@@ -2525,11 +2644,22 @@ fun SubscriptionPlansDialog(
                         "Basic budgets & local Room storage",
                         "Family participation (join groups)"
                     ),
-                    isCurrent = currentPlan == com.shakeexpense.app.domain.model.SubscriptionPlan.FREE,
-                    onSelect = { onSelectPlan(com.shakeexpense.app.domain.model.SubscriptionPlan.FREE) }
+                    isCurrent = isFreeCurrent,
+                    isDegradeBlocked = isFreeDegradeBlocked,
+                    statusBadgeText = if (isFreeDegradeBlocked) "INCLUDED" else null,
+                    onSelect = {
+                        if (isFreeDegradeBlocked) {
+                            Toast.makeText(context, "Cannot downgrade active premium membership", Toast.LENGTH_SHORT).show()
+                        } else if (!isFreeCurrent) {
+                            onSelectPlan(com.shakeexpense.app.domain.model.SubscriptionPlan.FREE)
+                            onDismiss()
+                        }
+                    }
                 )
 
                 // PLUS PLAN
+                val isPlusCurrent = currentPlan == com.shakeexpense.app.domain.model.SubscriptionPlan.PLUS
+                val isPlusDegradeBlocked = currentPlan.level > com.shakeexpense.app.domain.model.SubscriptionPlan.PLUS.level
                 PlanOptionCard(
                     title = "PLUS — ₹59/mo or ₹699/yr",
                     subtitle = "Understand & Protect Your Money",
@@ -2543,10 +2673,14 @@ fun SubscriptionPlansDialog(
                         "70%, 80%, 90%, 100% threshold notifications",
                         "Safe-to-Spend real-time daily runway"
                     ),
-                    isCurrent = currentPlan == com.shakeexpense.app.domain.model.SubscriptionPlan.PLUS,
+                    isCurrent = isPlusCurrent,
                     isPopular = true,
+                    isDegradeBlocked = isPlusDegradeBlocked,
+                    statusBadgeText = if (isPlusDegradeBlocked) "INCLUDED" else null,
                     onSelect = {
-                        if (currentPlan == com.shakeexpense.app.domain.model.SubscriptionPlan.PLUS) {
+                        if (isPlusDegradeBlocked) {
+                            Toast.makeText(context, "Already included in Family Pro tier", Toast.LENGTH_SHORT).show()
+                        } else if (isPlusCurrent) {
                             onDismiss()
                         } else {
                             pendingPaymentPlan = com.shakeexpense.app.domain.model.SubscriptionPlan.PLUS
@@ -2555,6 +2689,7 @@ fun SubscriptionPlansDialog(
                 )
 
                 // FAMILY PRO PLAN
+                val isFamilyProCurrent = currentPlan == com.shakeexpense.app.domain.model.SubscriptionPlan.FAMILY_PRO
                 PlanOptionCard(
                     title = "FAMILY PRO — ₹99/mo or ₹999/yr",
                     subtitle = "Manage Your Family's Finances Together",
@@ -2565,9 +2700,9 @@ fun SubscriptionPlansDialog(
                         "Family privacy controls (private / shared summary / shared)",
                         "Shared financial goals & family AI reports"
                     ),
-                    isCurrent = currentPlan == com.shakeexpense.app.domain.model.SubscriptionPlan.FAMILY_PRO,
+                    isCurrent = isFamilyProCurrent,
                     onSelect = {
-                        if (currentPlan == com.shakeexpense.app.domain.model.SubscriptionPlan.FAMILY_PRO) {
+                        if (isFamilyProCurrent) {
                             onDismiss()
                         } else {
                             pendingPaymentPlan = com.shakeexpense.app.domain.model.SubscriptionPlan.FAMILY_PRO
@@ -2588,9 +2723,8 @@ fun SubscriptionPlansDialog(
 fun MembershipPaymentDialog(
     targetPlan: com.shakeexpense.app.domain.model.SubscriptionPlan,
     onDismiss: () -> Unit,
-    onPaymentSuccess: (com.shakeexpense.app.domain.model.SubscriptionPlan) -> Unit
+    onInitiatePayment: (com.shakeexpense.app.domain.model.SubscriptionPlan, Boolean) -> Unit
 ) {
-    val context = LocalContext.current
     var isYearly by remember { mutableStateOf(false) }
 
     val amountInRupees = when (targetPlan) {
@@ -2611,7 +2745,7 @@ fun MembershipPaymentDialog(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text(text = "Payment Gateway Checkout", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(text = "Razorpay Checkout", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(text = "Upgrade to ${targetPlan.displayName}", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                 }
             }
@@ -2720,34 +2854,16 @@ fun MembershipPaymentDialog(
                     }
                 }
 
-                // Payment Gateway Redirect Action
+                // Proceed to Pay (Razorpay Gateway)
                 Button(
                     onClick = {
-                        try {
-                            val upiUri = Uri.parse("upi://pay?pa=shakeexpense@okhdfcbank&pn=ShakeExpense&am=$amountInRupees&cu=INR&tn=Membership_${targetPlan.name}")
-                            val intent = Intent(Intent.ACTION_VIEW, upiUri)
-                            context.startActivity(Intent.createChooser(intent, "Pay ₹$amountInRupees with UPI"))
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "No UPI app found. Please install a UPI payment app (GPay, PhonePe, Paytm) to complete payment.", Toast.LENGTH_LONG).show()
-                        }
+                        onInitiatePayment(targetPlan, isYearly)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
                 ) {
-                    Text("Proceed to Pay ₹$amountInRupees (UPI / Gateway)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-
-                // Complete / Verify Test Payment
-                OutlinedButton(
-                    onClick = {
-                        onPaymentSuccess(targetPlan)
-                        Toast.makeText(context, "Payment confirmed! Subscribed to ${targetPlan.displayName}", Toast.LENGTH_LONG).show()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Confirm Payment & Activate Membership", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Proceed to Pay ₹$amountInRupees", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         },
@@ -2767,6 +2883,8 @@ private fun PlanOptionCard(
     features: List<String>,
     isCurrent: Boolean,
     isPopular: Boolean = false,
+    isDegradeBlocked: Boolean = false,
+    statusBadgeText: String? = null,
     onSelect: () -> Unit
 ) {
     Card(
@@ -2775,9 +2893,13 @@ private fun PlanOptionCard(
             .clickable { onSelect() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = when {
+                isCurrent -> MaterialTheme.colorScheme.primaryContainer
+                isDegradeBlocked -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            }
         ),
-        border = if (isPopular) androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF2563EB)) else null
+        border = if (isPopular && !isDegradeBlocked) androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF4F46E5)) else null
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(
@@ -2794,7 +2916,17 @@ private fun PlanOptionCard(
                 if (isCurrent) {
                     Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF10B981)) {
                         Text(
-                            text = "CURRENT",
+                            text = "ACTIVE",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                } else if (statusBadgeText != null) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF64748B)) {
+                        Text(
+                            text = statusBadgeText,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -2802,7 +2934,7 @@ private fun PlanOptionCard(
                         )
                     }
                 } else if (isPopular) {
-                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF2563EB)) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF4F46E5)) {
                         Text(
                             text = "POPULAR",
                             fontSize = 9.sp,
@@ -2828,14 +2960,20 @@ private fun PlanOptionCard(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = Color(0xFF10B981),
+                        tint = if (isDegradeBlocked) Color(0xFF94A3B8) else Color(0xFF10B981),
                         modifier = Modifier.size(13.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = feature, fontSize = 11.sp, lineHeight = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        text = feature,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
+                        color = if (isDegradeBlocked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
     }
 }
+
 

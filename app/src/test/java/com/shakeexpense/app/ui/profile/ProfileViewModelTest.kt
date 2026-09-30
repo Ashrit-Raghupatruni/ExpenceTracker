@@ -56,6 +56,8 @@ class ProfileViewModelTest {
         networkMonitor = mock(NetworkConnectivityMonitor::class.java)
 
         `when`(themePreferences.themeMode).thenReturn(MutableStateFlow(AppThemeMode.DARK))
+        `when`(themePreferences.isShakeEnabled).thenReturn(MutableStateFlow(true))
+        `when`(themePreferences.isShakeAnywhereEnabled).thenReturn(MutableStateFlow(true))
         `when`(authRepository.userProfile).thenReturn(
             flowOf(
                 UserProfile(

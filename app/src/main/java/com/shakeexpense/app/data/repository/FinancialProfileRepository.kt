@@ -71,13 +71,25 @@ class FinancialProfileRepositoryImpl(
 
     override suspend fun updateTier(userId: String, tier: String) {
         val existing = financialProfileDao.getProfile(userId)
+        val currentPlan = com.shakeexpense.app.domain.model.SubscriptionPlan.entries.find {
+            it.name.equals(existing?.tier, ignoreCase = true)
+        } ?: com.shakeexpense.app.domain.model.SubscriptionPlan.FREE
+        val targetPlan = com.shakeexpense.app.domain.model.SubscriptionPlan.entries.find {
+            it.name.equals(tier, ignoreCase = true)
+        } ?: com.shakeexpense.app.domain.model.SubscriptionPlan.FREE
+
+        // Non-degradation security rule: User cannot downgrade membership, only upgrade
+        if (targetPlan.level < currentPlan.level) {
+            return
+        }
+
         val updated = (existing ?: FinancialProfileEntity(
             userId = userId,
             safetyScore = 0,
             monthlyIncomeCents = 0L,
             savingsTargetCents = 0L,
             billingCycleDay = 1
-        )).copy(tier = tier, updatedAt = System.currentTimeMillis())
+        )).copy(tier = targetPlan.name, updatedAt = System.currentTimeMillis())
         financialProfileDao.insertOrUpdateProfile(updated)
 
         if (userId != "default_local_user") {

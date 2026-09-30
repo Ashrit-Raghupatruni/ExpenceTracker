@@ -4,11 +4,14 @@ enum class SubscriptionPlan(
     val planId: String,
     val displayName: String,
     val monthlyPriceInr: Int,
-    val yearlyPriceInr: Int
+    val yearlyPriceInr: Int,
+    val level: Int
 ) {
-    FREE("free", "FREE", 0, 0),
-    PLUS("plus", "PLUS", 59, 699),
-    FAMILY_PRO("family_pro", "FAMILY PRO", 99, 999)
+    FREE("free", "FREE", 0, 0, 0),
+    PLUS("plus", "PLUS", 59, 699, 1),
+    FAMILY_PRO("family_pro", "FAMILY PRO", 99, 999, 2);
+
+    fun canUpgradeTo(target: SubscriptionPlan): Boolean = target.level > this.level
 }
 
 enum class SubscriptionStatus {

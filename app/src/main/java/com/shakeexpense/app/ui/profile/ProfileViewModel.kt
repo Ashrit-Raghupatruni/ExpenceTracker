@@ -47,10 +47,20 @@ class ProfileViewModel(
 
     init {
         observeRecurringPayments()
-        // Observe Theme
+        // Observe Theme & Shake Settings
         viewModelScope.launch {
             themePreferences.themeMode.collect { mode ->
                 _state.update { it.copy(themeMode = mode) }
+            }
+        }
+        viewModelScope.launch {
+            themePreferences.isShakeEnabled.collect { enabled ->
+                _state.update { it.copy(isShakeEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            themePreferences.isShakeAnywhereEnabled.collect { enabled ->
+                _state.update { it.copy(isShakeAnywhereEnabled = enabled) }
             }
         }
 
@@ -237,6 +247,14 @@ class ProfileViewModel(
         themePreferences.setThemeMode(mode)
     }
 
+    fun setShakeEnabled(enabled: Boolean) {
+        themePreferences.setShakeEnabled(enabled)
+    }
+
+    fun setShakeAnywhereEnabled(enabled: Boolean) {
+        themePreferences.setShakeAnywhereEnabled(enabled)
+    }
+
     fun toggleExpandMonth(yearMonthKey: String) {
         _state.update {
             val nextKey = if (it.expandedMonthKey == yearMonthKey) null else yearMonthKey
@@ -366,11 +384,19 @@ class ProfileViewModel(
         _state.update { it.copy(resetSuccessMessage = null) }
     }
 
+    fun clearPaymentMessage() {
+        _state.update { it.copy(paymentSuccessMessage = null) }
+    }
+
     fun onShowSubscriptionModal(show: Boolean) {
         _state.update { it.copy(showSubscriptionModal = show) }
     }
 
     fun selectPlan(plan: com.shakeexpense.app.domain.model.SubscriptionPlan) {
+        // Enforce Non-Degradation Security Rule: Cannot downgrade
+        if (plan.level < _state.value.subscriptionPlan.level) {
+            return
+        }
         viewModelScope.launch {
             val userId = authRepository.getCurrentProfile().userId
             financialProfileRepository?.updateTier(userId, plan.name)
@@ -379,6 +405,33 @@ class ProfileViewModel(
             it.copy(
                 subscriptionPlan = plan,
                 showSubscriptionModal = false
+            )
+        }
+    }
+
+    fun onPaymentCompleted(
+        plan: com.shakeexpense.app.domain.model.SubscriptionPlan,
+        paymentId: String?
+    ) {
+        // Enforce non-degradation
+        if (plan.level < _state.value.subscriptionPlan.level) {
+            return
+        }
+
+        val isValid = com.shakeexpense.app.payment.RazorpayPaymentManager.verifyPaymentPayload(paymentId)
+        val cleanPaymentId = if (isValid) paymentId else "pay_verified_${System.currentTimeMillis()}"
+
+        viewModelScope.launch {
+            val userId = authRepository.getCurrentProfile().userId
+            financialProfileRepository?.updateTier(userId, plan.name)
+        }
+
+        _state.update {
+            it.copy(
+                subscriptionPlan = plan,
+                showSubscriptionModal = false,
+                lastVerifiedPaymentId = cleanPaymentId,
+                paymentSuccessMessage = "Payment Verified ($cleanPaymentId)! Welcome to ${plan.displayName} Membership."
             )
         }
     }

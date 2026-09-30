@@ -16,3 +16,5 @@
 *.apk
 *.aab
 .kotlin
+.env
+.env.*

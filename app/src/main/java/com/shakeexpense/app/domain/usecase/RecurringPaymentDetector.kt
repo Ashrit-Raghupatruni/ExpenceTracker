@@ -1,7 +1,7 @@
 package com.shakeexpense.app.domain.usecase
 
 import com.shakeexpense.app.domain.model.ExpenseRecordItem
-import java.util.Calendar
+import java.util.regex.Pattern
 
 data class DetectedSubscription(
     val name: String,
@@ -16,20 +16,30 @@ data class DetectedSubscription(
 class RecurringPaymentDetector {
 
     companion object {
-        private val KNOWN_MONTHLY_SUBSCRIPTIONS = listOf(
-            "netflix", "spotify", "hotstar", "youtube", "apple music", "sonyliv", "zee5", "jiocinema",
-            "crunchyroll", "audible", "icloud", "google one", "chatgpt", "github", "dropbox", "notion",
-            "airtel", "jio", "vi", "wifi", "broadband", "act fibernet", "tata play", "dth",
-            "electricity", "bescom", "tneb", "msedcl", "water", "gas", "rent", "maintenance", "gym", "cult.fit"
+        // Unambiguous Digital Subscriptions & Paid Memberships (can detect even from 1 occurrence with exact brand match)
+        private val EXPLICIT_SUBSCRIPTION_BRANDS = listOf(
+            "netflix", "spotify", "hotstar", "disney\\+?", "youtube premium", "apple music", "sonyliv",
+            "zee5", "jiocinema", "crunchyroll", "audible", "icloud", "google one", "chatgpt", "copilot",
+            "dropbox", "notion", "midjourney", "figma", "canva", "adobe", "playstation", "xbox",
+            "cult\\.fit", "prime video", "amazon prime"
         )
 
-        private val KNOWN_YEARLY_SUBSCRIPTIONS = listOf(
-            "prime", "amazon prime", "disney", "insurance", "lic", "star health", "hdfc ergo",
-            "vehicle insurance", "car insurance", "bike insurance", "term insurance", "annual maintenance", "hosting", "domain"
+        // Utility and Bill services (Require either Category == Bills or at least 2 occurrences)
+        private val EXPLICIT_BILL_SERVICES = listOf(
+            "broadband", "wifi bill", "electricity bill", "water bill", "gas bill", "lpg cylinder",
+            "house rent", "maintenance charge", "tata play", "dth recharge", "airtel broadband",
+            "jio fiber", "act fibernet", "bescom", "tneb", "msedcl", "gym membership"
         )
 
-        private val GENERIC_CATEGORY_NAMES = setOf(
-            "food", "transport", "groceries", "grocery", "bills", "shopping", "entertainment", "others", "expense", "general"
+        // Yearly Subscriptions
+        private val KNOWN_YEARLY_KEYWORDS = listOf(
+            "prime", "amazon prime", "insurance", "lic", "star health", "hdfc ergo",
+            "car insurance", "bike insurance", "term insurance", "annual maintenance", "hosting", "domain"
+        )
+
+        private val GENERIC_EXCLUDE_TERMS = setOf(
+            "food", "transport", "groceries", "grocery", "shopping", "others", "expense", "general",
+            "bottle", "water bottle", "snack", "tea", "coffee", "lunch", "dinner", "breakfast", "chocolat", "chocolate", "bonda"
         )
     }
 
@@ -39,20 +49,36 @@ class RecurringPaymentDetector {
         val results = mutableListOf<DetectedSubscription>()
         val debits = records.filter { it.transactionType.equals("DEBIT", ignoreCase = true) }
 
-        // 1. Match Against Known Subscription & Utility Signatures
-        val allKnownKeywords = KNOWN_MONTHLY_SUBSCRIPTIONS + KNOWN_YEARLY_SUBSCRIPTIONS
-        val keywordGroups = debits.filter { item ->
-            val text = "${item.customName ?: ""} ${item.bankRef ?: ""}".lowercase()
-            allKnownKeywords.any { text.contains(it) }
+        // 1. Match Against Explicit Brand Subscriptions
+        val explicitPatterns = EXPLICIT_SUBSCRIPTION_BRANDS.map { Pattern.compile("(?i)\\b$it\\b") }
+        val billPatterns = EXPLICIT_BILL_SERVICES.map { Pattern.compile("(?i)\\b$it\\b") }
+
+        val brandGroups = debits.filter { item ->
+            val text = "${item.customName ?: ""} ${item.bankRef ?: ""}".trim()
+            if (text.isBlank()) false
+            else {
+                // Must not be a generic excluded term
+                val lower = text.lowercase()
+                if (GENERIC_EXCLUDE_TERMS.contains(lower)) return@filter false
+
+                // Check explicit brands
+                val matchesBrand = explicitPatterns.any { it.matcher(text).find() }
+                // Check bill services only if category is Bills or occurrences >= 2
+                val matchesBill = billPatterns.any { it.matcher(text).find() } &&
+                        (item.categoryName.equals("Bills", ignoreCase = true) || debits.count { d -> (d.customName ?: "").contains(text, ignoreCase = true) } >= 2)
+
+                matchesBrand || matchesBill
+            }
         }.groupBy { (it.customName ?: it.bankRef ?: "").trim() }
 
-        for ((rawName, items) in keywordGroups) {
+        for ((rawName, items) in brandGroups) {
             val cleanName = rawName.ifBlank { items.first().categoryName }
             val mostRecent = items.maxByOrNull { it.timestamp } ?: items.first()
             val mostCommonAmount = items.groupBy { it.amountCents }.maxByOrNull { it.value.size }?.key ?: items.first().amountCents
 
             val lower = cleanName.lowercase()
-            val isYearly = KNOWN_YEARLY_SUBSCRIPTIONS.any { lower.contains(it) } && !KNOWN_MONTHLY_SUBSCRIPTIONS.any { lower.contains(it) }
+            val isYearly = lower.contains("annual") || lower.contains("yearly") || lower.contains("12 month") ||
+                    (KNOWN_YEARLY_KEYWORDS.any { lower.contains(it) } && !lower.contains("monthly"))
             val cadence = if (isYearly) "YEARLY" else "MONTHLY"
 
             val nextDue = if (cadence == "YEARLY") {
@@ -74,18 +100,18 @@ class RecurringPaymentDetector {
             )
         }
 
-        // 2. Strict Evidence-Based Periodic Interval Matching (for non-keyword items)
-        // Group by customName/merchant name and identical amount
+        // 2. Strict Evidence-Based Periodic Interval Matching (for regular recurring expenses)
+        // Groups by non-generic name and identical amount, strictly requiring >= 2 periodic occurrences
         val merchantGroups = debits.filter {
             val name = (it.customName ?: "").trim().lowercase()
-            name.isNotBlank() && !GENERIC_CATEGORY_NAMES.contains(name)
+            name.isNotBlank() && !GENERIC_EXCLUDE_TERMS.contains(name) && !name.contains("bottle") && !name.contains("water bottle")
         }.groupBy { Pair((it.customName ?: "").trim().lowercase(), it.amountCents) }
 
         for ((pair, items) in merchantGroups) {
             val (nameLower, amountCents) = pair
             if (results.any { it.name.lowercase() == nameLower && it.amountCents == amountCents }) continue
 
-            // Require at least 2 occurrences
+            // Require at least 2 occurrences spaced 25 to 35 days apart (monthly) or 350 to 380 days apart (yearly)
             if (items.size >= 2) {
                 val sortedItems = items.sortedBy { it.timestamp }
                 var hasPeriodicInterval = false
@@ -135,4 +161,5 @@ class RecurringPaymentDetector {
         return results.distinctBy { Pair(it.name.lowercase(), it.amountCents) }
     }
 }
+
 

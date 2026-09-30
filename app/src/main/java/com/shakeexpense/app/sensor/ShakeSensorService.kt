@@ -63,6 +63,10 @@ class ShakeSensorService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        if (!com.shakeexpense.app.ui.theme.ThemePreferences.isShakeEnabled(this)) {
+            stopSelf()
+            return
+        }
         createNotificationChannels()
         initShakeDetection()
     }
@@ -86,6 +90,10 @@ class ShakeSensorService : Service() {
     }
 
     private fun registerSensor() {
+        if (!com.shakeexpense.app.ui.theme.ThemePreferences.isShakeEnabled(this)) {
+            unregisterSensor()
+            return
+        }
         if (!isSensorRegistered && sensorManager != null && accelerometer != null && shakeDetector != null) {
             sensorManager?.registerListener(
                 shakeDetector,
@@ -107,6 +115,22 @@ class ShakeSensorService : Service() {
     }
 
     fun onShakeDetected() {
+        if (!com.shakeexpense.app.ui.theme.ThemePreferences.isShakeEnabled(this)) {
+            Log.d(TAG, "Shake ignored: Shake detection is turned OFF by user")
+            unregisterSensor()
+            return
+        }
+
+        val shakeAnywhereEnabled = com.shakeexpense.app.ui.theme.ThemePreferences.isShakeAnywhereEnabled(this)
+        val canDrawOverlay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.canDrawOverlays(this)
+        } else true
+
+        if (!shakeAnywhereEnabled) {
+            Log.d(TAG, "Shake ignored: Shake Anywhere is disabled by user in Settings")
+            return
+        }
+
         Log.d(TAG, "Physical shake detected!")
         triggerHaptic()
 
@@ -216,6 +240,13 @@ class ShakeSensorService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!com.shakeexpense.app.ui.theme.ThemePreferences.isShakeEnabled(this)) {
+            unregisterSensor()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
         when (intent?.action) {
             ACTION_START -> {
                 startForeground(NOTIFICATION_ID, buildForegroundNotification())
@@ -225,6 +256,7 @@ class ShakeSensorService : Service() {
                 unregisterSensor()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
+                return START_NOT_STICKY
             }
             ACTION_TRIGGER_SHAKE -> {
                 onShakeDetected()
@@ -288,6 +320,11 @@ class ShakeSensorService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
+        if (!com.shakeexpense.app.ui.theme.ThemePreferences.isShakeEnabled(this)) {
+            unregisterSensor()
+            stopSelf()
+            return
+        }
         registerSensor()
         try {
             val restartIntent = Intent(applicationContext, ShakeSensorService::class.java).apply {

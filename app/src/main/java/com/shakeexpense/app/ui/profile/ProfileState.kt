@@ -39,6 +39,10 @@ data class ProfileState(
     val safetyRiskSignalsSubScore: String = "None",
     val subscriptionPlan: SubscriptionPlan = SubscriptionPlan.FREE,
     val showSubscriptionModal: Boolean = false,
+    val paymentSuccessMessage: String? = null,
+    val lastVerifiedPaymentId: String? = null,
     val isAddOrEditRecurringDialogOpen: Boolean = false,
-    val editingRecurringPayment: RecurringPaymentEntity? = null
+    val editingRecurringPayment: RecurringPaymentEntity? = null,
+    val isShakeEnabled: Boolean = true,
+    val isShakeAnywhereEnabled: Boolean = true
 )
